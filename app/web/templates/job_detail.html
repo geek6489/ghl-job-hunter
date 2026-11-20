@@ -1,0 +1,62 @@
+{% extends "base.html" %}{% from "_macros.html" import score %}{% block content %}
+<p><a href="/jobs">← All jobs</a></p>
+<div class="detail-head card">
+  <div>
+    <h1>{{ job.title }}</h1>
+    <p class="lead">{{ job.company }} · {{ job.location }} · {{ job.work_arrangement }} · {{ job.employment_type }}</p>
+    <p>{% for p in job.platforms %}<span class="pill p-{{ p|replace(' ','') }}">{{ p }}</span>{% endfor %}
+      <span class="status st-{{ job.status }}">{{ job.status }}</span></p>
+    <a class="btn primary" href="{{ job.primary_url }}" target="_blank" rel="noopener noreferrer">Open original posting ↗</a>
+  </div>
+  <div class="bigscore">{{ score(job) }}<div>{{ job.category or 'Not scored yet' }}</div>
+    <div class="muted small">{{ 'Scored by ' ~ job.analyzed_by if job.analyzed_by else '' }}</div></div>
+</div>
+{% if job.analysis_error %}<p class="err">Last analysis attempt failed: {{ job.analysis_error }}</p>{% endif %}
+<div class="grid2">
+  <div>
+    <section class="card"><h2>AI summary</h2><p>{{ a.get('summary') or 'Not Specified' }}</p>
+      {% if a.get('why_it_matches') %}<h3>Why it matches</h3><p>{{ a.why_it_matches }}</p>{% endif %}
+      <h3>Recommendation</h3><p><b>{{ a.get('recommendation') or 'Not Specified' }}</b></p>
+      {% if a.get('application_strategy') and a.application_strategy != 'Not Specified' %}<h3>Application strategy</h3><p>{{ a.application_strategy }}</p>{% endif %}
+    </section>
+    <section class="card"><h2>Skills</h2>
+      <h3>Matching</h3><p>{% for s in a.get('matching_skills', []) %}<span class="chip ok">{{ s }}</span>{% else %}<span class="muted">Not Specified</span>{% endfor %}</p>
+      <h3>Missing</h3><p>{% for s in a.get('missing_skills', []) %}<span class="chip miss">{{ s }}</span>{% else %}<span class="muted">None identified</span>{% endfor %}</p>
+      <h3>Required</h3><p>{% for s in job.required_skills %}<span class="chip">{{ s }}</span>{% else %}<span class="muted">Not Specified</span>{% endfor %}</p>
+      <h3>Red flags</h3>{% if a.get('red_flags') %}<ul class="flags">{% for r in a.red_flags %}<li>{{ r }}</li>{% endfor %}</ul>{% else %}<p class="muted">None identified</p>{% endif %}
+    </section>
+    {% if a.get('sub_scores') %}<section class="card"><h2>Score breakdown</h2><ul class="bars">
+      {% for k, v in a.sub_scores.items() %}<li><span>{{ k|replace('_',' ')|capitalize }}</span><i style="width:{{ v }}%"></i><b>{{ v }}</b></li>{% endfor %}</ul></section>{% endif %}
+    <section class="card"><h2>Full description</h2><div class="pre">{{ job.description or 'Not Specified' }}</div></section>
+  </div>
+  <div>
+    <section class="card"><h2>Details</h2>
+      <dl class="dl">
+        <dt>Salary / rate</dt><dd>{{ job.salary_text }}</dd>
+        <dt>Experience</dt><dd>{{ job.required_experience }}</dd>
+        <dt>Country</dt><dd>{{ job.country }}</dd>
+        <dt>Posted</dt><dd>{{ job.posted_at|local if job.posted_at else (job.posted_at_text or 'Not Specified') }}</dd>
+        <dt>Discovered</dt><dd>{{ job.discovered_at|local }}</dd>
+        <dt>Last seen</dt><dd>{{ job.last_seen_at|local }}</dd>
+        {% if job.content_updated_at %}<dt>Listing updated</dt><dd>{{ job.content_updated_at|local }}</dd>{% endif %}
+        <dt>Deadline</dt><dd>{{ job.deadline }}</dd>
+        <dt>How to apply</dt><dd>{{ job.application_method }}</dd>
+        <dt>Recruiter</dt><dd>{{ job.recruiter_info }}</dd>
+      </dl>
+      <h3>All source links</h3>
+      <ul class="links">{% for s in job.sources %}<li><span class="pill p-{{ s.platform|replace(' ','') }}">{{ s.platform }}</span> <a href="{{ s.url }}" target="_blank" rel="noopener noreferrer">{{ s.url|truncate(70) }}</a><div class="muted small">via {{ s.provider }}, first seen {{ s.first_seen_at|local }}</div></li>{% endfor %}</ul>
+    </section>
+    <section class="card"><h2>Application tracker</h2>
+      {% if request.query_params.get('saved') %}<p class="ok">Saved.</p>{% endif %}
+      <form method="post" action="/jobs/{{ job.id }}/tracker" class="stack">
+        <label>Application status<select name="tracker_status">{% for t in trackers %}<option {{ 'selected' if job.tracker_status==t }}>{{ t }}</option>{% endfor %}</select></label>
+        <label>Job status<select name="status">{% for t in statuses %}<option {{ 'selected' if job.status==t }}>{{ t }}</option>{% endfor %}</select></label>
+        <label>Applied on<input type="date" name="applied_at" value="{{ job.applied_at.strftime('%Y-%m-%d') if job.applied_at else '' }}"></label>
+        <label>Notes<textarea name="notes" rows="5">{{ job.notes }}</textarea></label>
+        <button class="btn primary">Save</button>
+      </form>
+      <form method="post" action="/jobs/{{ job.id }}/reanalyze"><button class="btn ghost">Re-run AI analysis</button></form>
+    </section>
+  </div>
+</div>
+{% endblock %}

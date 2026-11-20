@@ -1,0 +1,27 @@
+{% extends "base.html" %}{% from "_macros.html" import job_row %}{% block content %}
+<div class="page-head"><h1>Job listings <span class="muted">({{ total }})</span></h1></div>
+<form class="filters card" method="get">
+  <input name="q" placeholder="Search title, company, description" value="{{ f.get('q','') }}">
+  <input name="title" placeholder="Job title contains" value="{{ f.get('title','') }}">
+  <select name="platform"><option value="">All platforms</option>{% for p in platforms %}<option {{ 'selected' if f.get('platform')==p }}>{{ p }}</option>{% endfor %}</select>
+  <select name="min_score"><option value="">Any score</option>{% for v,l in [(90,'90+ Excellent'),(75,'75+ Strong'),(60,'60+ Potential')] %}<option value="{{ v }}" {{ 'selected' if f.get('min_score')==v|string }}>{{ l }}</option>{% endfor %}</select>
+  <input name="country" placeholder="Country / location" value="{{ f.get('country','') }}">
+  <select name="arrangement"><option value="">Remote / on-site</option>{% for a in ['Remote','Hybrid','On-site','Not Specified'] %}<option {{ 'selected' if f.get('arrangement')==a }}>{{ a }}</option>{% endfor %}</select>
+  <select name="employment"><option value="">Any employment type</option>{% for e in ['Full-time','Part-time','Contract','Freelance','Internship','Not Specified'] %}<option {{ 'selected' if f.get('employment')==e }}>{{ e }}</option>{% endfor %}</select>
+  <input name="salary_min" type="number" placeholder="Min USD/yr" value="{{ f.get('salary_min','') }}">
+  <input name="salary_max" type="number" placeholder="Max USD/yr" value="{{ f.get('salary_max','') }}">
+  <select name="posted_within"><option value="">Posted any time</option>{% for d,l in [(1,'Last 24 hours'),(3,'Last 3 days'),(7,'Last 7 days'),(30,'Last 30 days')] %}<option value="{{ d }}" {{ 'selected' if f.get('posted_within')==d|string }}>{{ l }}</option>{% endfor %}</select>
+  <select name="status"><option value="">Any job status</option>{% for st in statuses %}<option {{ 'selected' if f.get('status')==st }}>{{ st }}</option>{% endfor %}</select>
+  <select name="tracker"><option value="">Any application status</option>{% for st in trackers %}<option {{ 'selected' if f.get('tracker')==st }}>{{ st }}</option>{% endfor %}</select>
+  <select name="sort">{% for k,l in [('score','Sort: best score'),('newest','Sort: newest found'),('posted','Sort: newest posted'),('salary','Sort: highest salary')] %}<option value="{{ k }}" {{ 'selected' if f.get('sort','score')==k }}>{{ l }}</option>{% endfor %}</select>
+  <label class="chk"><input type="checkbox" name="show_non_jobs" value="1" {{ 'checked' if f.get('show_non_jobs') }}> Include non-job posts</label>
+  <button class="btn primary">Apply filters</button> <a class="btn ghost" href="/jobs">Reset</a>
+</form>
+<div class="card scroll">
+<table class="tbl">
+<thead><tr><th>Score</th><th>Job</th><th>Source</th><th>Location</th><th>Pay / type</th><th>Posted</th><th>Status</th><th></th></tr></thead>
+<tbody>{% for j in jobs %}{{ job_row(j) }}{% else %}<tr><td colspan="8" class="muted">No jobs match these filters.</td></tr>{% endfor %}</tbody>
+</table>
+</div>
+{% if pages > 1 %}<div class="pager">{% for p in range(1, pages+1) %}<a class="{{ 'on' if p==page }}" href="/jobs?{{ qs }}&page={{ p }}">{{ p }}</a>{% endfor %}</div>{% endif %}
+{% endblock %}

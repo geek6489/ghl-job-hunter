@@ -1,0 +1,50 @@
+# Single-server deployment (any VPS): docker compose up -d
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: jobs
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: jobs
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobs"]
+      interval: 10s
+      retries: 5
+  web:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://jobs:${POSTGRES_PASSWORD}@db:5432/jobs
+    ports: ["8000:8000"]
+    depends_on: { db: { condition: service_healthy } }
+  worker:
+    build: .
+    restart: unless-stopped
+    command: ["python", "-m", "app.worker"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://jobs:${POSTGRES_PASSWORD}@db:5432/jobs
+    depends_on: { db: { condition: service_healthy } }
+  backup:
+    # Nightly pg_dump into ./backups (keeps 14 days; see scripts/backup.sh for manual runs)
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes: [./backups:/backups]
+    entrypoint: ["sh", "/backup-loop.sh"]
+    configs: [{ source: backup_loop, target: /backup-loop.sh }]
+    depends_on: { db: { condition: service_healthy } }
+configs:
+  backup_loop:
+    content: |
+      while true; do
+        pg_dump -h db -U jobs jobs | gzip > /backups/jobs-$$(date +%F).sql.gz
+        ls -1t /backups/*.sql.gz | tail -n +15 | xargs -r rm --
+        sleep 86400
+      done
+volumes:
+  pgdata:

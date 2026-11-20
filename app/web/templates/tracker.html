@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% from "_macros.html" import score %}{% block content %}
+<div class="page-head"><h1>Application tracker</h1></div>
+<p class="muted">Change a job's status from its detail page. Jobs still marked "New" aren't shown here.</p>
+<div class="board">
+{% for col, jobs in columns.items() %}
+  <section class="col"><h2>{{ col }} <span class="muted">{{ jobs|length }}</span></h2>
+  {% for j in jobs %}<a class="tcard" href="/jobs/{{ j.id }}">{{ score(j) }} <b>{{ j.title }}</b><div class="muted">{{ j.company }}</div>
+    {% if j.applied_at %}<div class="small">Applied {{ j.applied_at.strftime('%d %b %Y') }}</div>{% endif %}
+    {% if j.notes %}<div class="small clip2">{{ j.notes }}</div>{% endif %}</a>
+  {% else %}<p class="muted small">Empty</p>{% endfor %}</section>
+{% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% macro score(j) -%}
+<span class="score {{ j.score|score_class }}" title="{{ j.category or 'Not scored yet' }}">{{ j.score if j.score is not none else '–' }}</span>
+{%- endmacro %}
+{% macro job_row(j) -%}
+<tr>
+  <td>{{ score(j) }}</td>
+  <td class="title-cell"><a href="/jobs/{{ j.id }}">{{ j.title }}</a>
+    <div class="muted">{{ j.company }}{% if j.analyzed_by == 'keyword heuristic' %} · <span class="tag">keyword score</span>{% endif %}</div></td>
+  <td>{% for p in j.platforms %}<span class="pill p-{{ p|replace(' ','') }}">{{ p }}</span>{% endfor %}</td>
+  <td>{{ j.location }}<div class="muted">{{ j.work_arrangement }}</div></td>
+  <td>{{ j.salary_text }}<div class="muted">{{ j.employment_type }}</div></td>
+  <td class="nowrap">{{ j.posted_at|local if j.posted_at else (j.posted_at_text or 'Not Specified') }}<div class="muted">found {{ j.discovered_at|local }}</div></td>
+  <td><span class="status st-{{ j.status }}">{{ j.status }}</span>{% if j.tracker_status != 'New' %}<div class="muted">{{ j.tracker_status }}</div>{% endif %}</td>
+  <td><a class="btn sm" href="{{ j.primary_url }}" target="_blank" rel="noopener noreferrer">Open ↗</a></td>
+</tr>
+{%- endmacro %}

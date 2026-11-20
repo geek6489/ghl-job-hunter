@@ -1,0 +1,49 @@
+{% extends "base.html" %}{% block content %}
+<div class="page-head"><h1>Monitoring settings</h1></div>
+{% if saved == '1' %}<p class="ok">Settings saved. The worker applies them on its next minute tick.</p>
+{% elif saved == 'email-ok' %}<p class="ok">Test email sent.</p>
+{% elif saved == 'email-failed' %}<p class="err">Test email failed. See the Health page for the error.</p>{% endif %}
+<form method="post" action="/settings" class="grid2">
+  <section class="card"><h2>Platforms</h2>
+    {% for pl in platforms %}<label class="chk"><input type="checkbox" name="platform_{{ pl }}" {{ 'checked' if p.platforms.get(pl) }}> {{ pl }}</label>{% endfor %}
+    <p class="muted small">See Health for what each platform can actually reach.</p>
+    <h2>Schedule</h2>
+    <label>Scan every<select name="monitor_interval_minutes">{% for m,l in [(30,'30 minutes'),(60,'hour'),(120,'2 hours'),(180,'3 hours'),(360,'6 hours'),(720,'12 hours'),(1440,'day')] %}<option value="{{ m }}" {{ 'selected' if p.monitor_interval_minutes==m }}>{{ l }}</option>{% endfor %}</select></label>
+    <label>Hide jobs posted more than (days) ago, unless still open<input type="number" name="max_job_age_days" min="1" max="120" value="{{ p.max_job_age_days }}"></label>
+  </section>
+  <section class="card"><h2>Email notifications</h2>
+    {% if not email_ready %}<p class="warn">No email provider is configured on the server yet (RESEND_API_KEY or SMTP_*, plus EMAIL_FROM).</p>{% endif %}
+    <label class="chk"><input type="checkbox" name="email_enabled" {{ 'checked' if p.email_enabled }}> Send emails</label>
+    <label>Send to (comma separated)<input name="email_to" value="{{ p.email_to }}" placeholder="{{ env_email_to or 'you@example.com' }}"></label>
+    <label>Frequency for relevant jobs<select name="notification_frequency">
+      {% for v,l in [('instant','Instant (after every scan)'),('3h','Digest every 3 hours'),('daily','Daily digest')] %}<option value="{{ v }}" {{ 'selected' if p.notification_frequency==v }}>{{ l }}</option>{% endfor %}</select></label>
+    <label>Daily digest hour (local)<input type="number" name="digest_hour" min="0" max="23" value="{{ p.digest_hour }}"></label>
+    <label>Immediate alert at score ≥<input type="number" name="instant_min_score" min="0" max="100" value="{{ p.instant_min_score }}"></label>
+    <label>Minimum relevance score to notify<input type="number" name="min_relevance_score" min="0" max="100" value="{{ p.min_relevance_score }}"></label>
+    <label>Daily AI summary hour (local)<input type="number" name="daily_summary_hour" min="0" max="23" value="{{ p.daily_summary_hour }}"></label>
+  </section>
+  <section class="card"><h2>Preferences</h2>
+    <label>Preferred locations (comma separated)<input name="preferred_locations" value="{{ p.preferred_locations|join(', ') }}"></label>
+    <label class="chk"><input type="checkbox" name="remote_only" {{ 'checked' if p.remote_only }}> Only notify me about remote roles</label>
+    <label>Minimum salary (USD per year)<input type="number" name="salary_min_usd_annual" value="{{ p.salary_min_usd_annual or '' }}"></label>
+    <label>Minimum hourly rate (USD)<input type="number" name="salary_min_hourly_usd" value="{{ p.salary_min_hourly_usd or '' }}"></label>
+  </section>
+  <section class="card"><h2>Your expertise (Claude scores against this)</h2>
+    <textarea name="profile" rows="9">{{ p.profile }}</textarea>
+  </section>
+  <div class="span2"><button class="btn primary">Save settings</button></div>
+</form>
+<form method="post" action="/settings/test-email"><button class="btn ghost">Send a test email</button></form>
+<section class="card" id="keywords"><h2>Search keywords</h2>
+  <form method="post" action="/settings/keywords" class="inline">
+    <input name="text" placeholder="Add a keyword, e.g. HighLevel SaaS Mode" required>
+    <select name="group"><option value="ghl">GoHighLevel group</option><option value="automation">Automation &amp; CRM group</option></select>
+    <button class="btn">Add</button>
+  </form>
+  <table class="tbl"><thead><tr><th>Keyword</th><th>Group</th><th>Enabled</th><th></th></tr></thead><tbody>
+  {% for k in keywords %}<tr class="{{ '' if k.enabled else 'dim' }}"><td>{{ k.text }}</td><td>{{ 'GoHighLevel' if k.group=='ghl' else 'Automation & CRM' }}</td>
+    <td><form method="post" action="/settings/keywords/{{ k.id }}/toggle"><button class="btn sm ghost">{{ 'On' if k.enabled else 'Off' }}</button></form></td>
+    <td><form method="post" action="/settings/keywords/{{ k.id }}/delete"><button class="btn sm danger">Remove</button></form></td></tr>{% endfor %}
+  </tbody></table>
+</section>
+{% endblock %}

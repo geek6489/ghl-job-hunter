@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}GHL Job Hunter{% endblock %}</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+{% if request.session.get("user") %}
+<header class="topbar">
+  <a class="brand" href="/"><span class="logo">GJ</span> GHL Job Hunter</a>
+  <nav>
+    <a href="/" class="{{ 'on' if nav=='overview' }}">Overview</a>
+    <a href="/jobs" class="{{ 'on' if nav in ('jobs','job_detail') }}">Jobs</a>
+    <a href="/tracker" class="{{ 'on' if nav=='tracker' }}">Tracker</a>
+    <a href="/summaries" class="{{ 'on' if nav=='summaries' }}">Daily summaries</a>
+    <a href="/settings" class="{{ 'on' if nav=='settings' }}">Settings</a>
+    <a href="/health" class="{{ 'on' if nav=='health' }}">Health</a>
+  </nav>
+  <form method="post" action="/logout"><button class="link">Sign out</button></form>
+</header>
+{% endif %}
+<main class="wrap">{% block content %}{% endblock %}</main>
+</body></html>

@@ -1,0 +1,34 @@
+{% extends "base.html" %}{% from "_macros.html" import job_row %}{% block content %}
+<div class="page-head">
+  <h1>Overview</h1>
+  <form method="post" action="/run-now"><button class="btn">Run a scan now</button></form>
+</div>
+{% if not claude %}<p class="warn">Claude is not configured (ANTHROPIC_API_KEY), so jobs are scored by keyword matching and have no AI summaries.</p>{% endif %}
+<div class="kpis">
+  <a class="kpi" href="/jobs"><b>{{ stats.total }}</b><span>Total jobs found</span></a>
+  <a class="kpi" href="/jobs?sort=newest&posted_within=1"><b>{{ stats.today }}</b><span>Discovered today</span></a>
+  <a class="kpi ex" href="/jobs?min_score=90"><b>{{ stats.excellent }}</b><span>Excellent matches</span></a>
+  <a class="kpi strong" href="/jobs?min_score=75&max_score=89"><b>{{ stats.strong }}</b><span>Strong matches</span></a>
+  <a class="kpi" href="/jobs?status=Active"><b>{{ stats.active }}</b><span>Active opportunities</span></a>
+  <a class="kpi" href="/tracker"><b>{{ stats.applied }}</b><span>Jobs applied to</span></a>
+</div>
+<div class="grid2">
+  <section class="card">
+    <h2>Best open matches</h2>
+    <table class="tbl"><tbody>{% for j in top %}{{ job_row(j) }}{% else %}<tr><td class="muted">No scored jobs yet. The first scan runs within a minute of the worker starting.</td></tr>{% endfor %}</tbody></table>
+  </section>
+  <section class="card side">
+    <h2>Last scan</h2>
+    {% if last_run %}
+      <p><span class="status st-{{ last_run.status }}">{{ last_run.status }}</span> {{ last_run.started_at|local }}</p>
+      <p class="muted">{{ last_run.stats.get('new', 0) }} new · {{ last_run.stats.get('merged', 0) }} merged duplicates · {{ last_run.stats.get('refreshed', 0) }} already known · {{ last_run.stats.get('raw', 0) }} results scanned</p>
+    {% else %}<p class="muted">No scans yet.</p>{% endif %}
+    <h2>Last 7 days by platform</h2>
+    <ul class="bars">{% set mx = (by_platform|map(attribute=1)|max) if by_platform else 1 %}
+    {% for p, n in by_platform|sort(attribute=1, reverse=true) %}<li><span>{{ p }}</span><i style="width:{{ (100*n/mx)|round }}%"></i><b>{{ n }}</b></li>{% else %}<li class="muted">Nothing yet</li>{% endfor %}</ul>
+    {% if summary %}<h2>Latest daily summary</h2><p class="pre clip">{{ summary.narrative }}</p><a href="/summaries">All summaries →</a>{% endif %}
+  </section>
+</div>
+<section class="card"><h2>Recently discovered</h2>
+<table class="tbl"><tbody>{% for j in recent %}{{ job_row(j) }}{% endfor %}</tbody></table></section>
+{% endblock %}

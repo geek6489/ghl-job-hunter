@@ -1,0 +1,19 @@
+{% extends "base.html" %}{% block content %}
+<div class="page-head"><h1>Daily summaries</h1>
+<form method="post" action="/summaries/generate" class="inline"><button class="btn">Generate today's now</button>
+<label class="chk"><input type="checkbox" name="send" value="1"> also email it</label></form></div>
+{% for s in items %}
+<section class="card">
+  <h2>{{ s.day }} <span class="muted small">by {{ s.generated_by }}{% if s.emailed_at %} · emailed {{ s.emailed_at|local }}{% endif %}</span></h2>
+  <div class="kpis small">
+    <div class="kpi"><b>{{ s.stats.total_new }}</b><span>New</span></div>
+    <div class="kpi ex"><b>{{ s.stats.excellent }}</b><span>Excellent</span></div>
+    <div class="kpi strong"><b>{{ s.stats.strong }}</b><span>Strong</span></div>
+    <div class="kpi"><b>{{ s.stats.avg_salary_text }}</b><span>Avg salary (USD, n={{ s.stats.salary_sample_size }})</span></div>
+  </div>
+  <div class="pre">{{ s.narrative }}</div>
+  <h3>Best 5</h3><ol>{% for b in s.stats.best %}<li><a href="/jobs/{{ b.id }}">{{ b.title }}</a> · {{ b.company }} · <b>{{ b.score }}</b> · <a href="{{ b.url }}" target="_blank" rel="noopener noreferrer">original ↗</a></li>{% else %}<li class="muted">None</li>{% endfor %}</ol>
+  <p class="muted">Most active platforms: {% for p, n in s.stats.platforms %}{{ p }} ({{ n }}){{ ', ' if not loop.last }}{% else %}none{% endfor %}</p>
+</section>
+{% else %}<p class="muted">No summaries yet. The first one is generated at the hour set in Settings.</p>{% endfor %}
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}{% block content %}
+<div class="page-head"><h1>System health</h1><form method="post" action="/run-now"><button class="btn">Run a scan now</button></form></div>
+{% if queued %}<p class="ok">Scan queued. The worker starts it within a minute.</p>{% endif %}
+<div class="kpis">
+  <div class="kpi {{ 'ex' if hb_fresh else 'bad' }}"><b>{{ 'Running' if hb_fresh else 'Not responding' }}</b><span>Worker · last heartbeat {{ hb and (hb|replace('T',' '))[:16] ~ ' UTC' or 'never' }}</span></div>
+  <div class="kpi"><b>Every {{ interval }} min</b><span>Scan frequency</span></div>
+  <div class="kpi"><b>${{ '%.2f'|format(total_cost) }}</b><span>API spend this month (estimated)</span></div>
+  <div class="kpi"><b>${{ '%.2f'|format(projected) }}</b><span>Projected for 30 days</span></div>
+</div>
+<section class="card"><h2>Platform coverage</h2>
+<table class="tbl"><thead><tr><th>Platform</th><th>Status</th><th>How it's searched</th><th>Limits</th></tr></thead><tbody>
+{% for c in coverage %}<tr><td><b>{{ c.platform }}</b></td><td><span class="lvl lvl-{{ c.level|replace(' ','') }}">{{ c.level }}</span></td><td>{{ c.how }}</td><td class="muted">{{ c.limits }}</td></tr>{% endfor %}
+</tbody></table></section>
+<section class="card"><h2>Integrations</h2>
+<ul class="checks">
+  <li class="{{ 'y' if cfg.claude_enabled else 'n' }}">Claude API ({{ cfg.claude_model }}, effort {{ cfg.claude_effort }})</li>
+  <li class="{{ 'y' if cfg.serper_api_key or cfg.brave_api_key else 'n' }}">Web search API ({{ 'Serper' if cfg.serper_api_key else 'Brave' if cfg.brave_api_key else 'none' }})</li>
+  <li class="{{ 'y' if cfg.serpapi_api_key else 'n' }}">SerpApi Google Jobs</li>
+  <li class="{{ 'y' if cfg.x_bearer_token else 'n' }}">X API</li>
+  <li class="{{ 'y' if cfg.email_enabled else 'n' }}">Email ({{ cfg.email_provider }})</li>
+  <li class="{{ 'y' if cfg.healthcheck_ping_url else 'n' }}">External uptime ping (HEALTHCHECK_PING_URL)</li>
+</ul></section>
+<div class="grid2">
+<section class="card"><h2>API usage this month</h2>
+<table class="tbl"><thead><tr><th>Provider</th><th>Requests</th><th>Tokens in / out</th><th>Est. cost</th></tr></thead><tbody>
+{% for p, units, tin, tout, cost in usage %}<tr><td>{{ p }}</td><td>{{ units }}</td><td>{{ tin or 0 }} / {{ tout or 0 }}</td><td>${{ '%.3f'|format(cost or 0) }}</td></tr>{% else %}<tr><td class="muted" colspan="4">No paid API calls yet.</td></tr>{% endfor %}
+</tbody></table></section>
+<section class="card"><h2>Sources, last 24 hours</h2>
+<table class="tbl"><thead><tr><th>Source</th><th>Calls</th><th>Results kept</th><th>Failures</th></tr></thead><tbody>
+{% for p, calls, res, fails in last24 %}<tr><td>{{ p }}</td><td>{{ calls }}</td><td>{{ res or 0 }}</td><td class="{{ 'err' if fails }}">{{ fails or 0 }}</td></tr>{% else %}<tr><td class="muted" colspan="4">No searches yet.</td></tr>{% endfor %}
+</tbody></table></section>
+</div>
+<section class="card"><h2>Recent scans</h2>
+<table class="tbl"><thead><tr><th>Started</th><th>Trigger</th><th>Status</th><th>Results</th><th>New</th><th>Merged</th><th>Analysed</th><th>Emailed</th><th>Duration</th></tr></thead><tbody>
+{% for r in runs %}<tr><td>{{ r.started_at|local }}</td><td>{{ r.trigger }}</td><td><span class="status st-{{ r.status }}">{{ r.status }}</span></td>
+<td>{{ r.stats.get('raw', 0) }}</td><td>{{ r.stats.get('new', 0) }}</td><td>{{ r.stats.get('merged', 0) }}</td><td>{{ r.stats.get('analyzed', 0) }}</td><td>{{ r.stats.get('emailed', 0) }}</td>
+<td>{{ ((r.finished_at - r.started_at).total_seconds()|round|int ~ 's') if r.finished_at else '…' }}</td></tr>
+{% if r.error %}<tr><td colspan="9"><pre class="err small">{{ r.error[-800:] }}</pre></td></tr>{% endif %}
+{% else %}<tr><td class="muted" colspan="9">No scans yet.</td></tr>{% endfor %}
+</tbody></table></section>
+<section class="card"><h2>Failed searches and connections</h2>
+<table class="tbl"><tbody>{% for f in failures %}<tr><td class="nowrap">{{ f.at|local }}</td><td>{{ f.provider }}</td><td>{{ f.platform }}</td><td class="small">{{ f.query|truncate(80) }}</td><td class="err small">{{ f.error|truncate(200) }}</td></tr>{% else %}<tr><td class="muted">None.</td></tr>{% endfor %}</tbody></table></section>
+<section class="card"><h2>Recent emails</h2>
+<table class="tbl"><tbody>{% for n in notes %}<tr><td class="nowrap">{{ n.at|local }}</td><td>{{ n.kind }}</td><td>{{ n.subject }}</td><td class="{{ 'ok' if n.ok else 'err' }}">{{ 'sent' if n.ok else n.error }}</td></tr>{% else %}<tr><td class="muted">None yet.</td></tr>{% endfor %}</tbody></table></section>
+{% endblock %}

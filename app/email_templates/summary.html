@@ -1,0 +1,23 @@
+<!doctype html>
+<html><body style="margin:0;background:#f4f5f7;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1f2430">
+<div style="max-width:640px;margin:auto;padding:24px 16px">
+<div style="font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">GHL Job Hunter &middot; Daily summary</div>
+<h1 style="margin:4px 0 14px;font-size:22px">{{ s.day }}</h1>
+<table width="100%" cellpadding="0" cellspacing="6"><tr>
+{% for label, val in [("New jobs", st.total_new), ("Excellent", st.excellent), ("Strong", st.strong), ("Avg salary", st.avg_salary_text)] %}
+<td style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px;text-align:center">
+<div style="font-size:20px;font-weight:700">{{ val }}</div><div style="font-size:12px;color:#6b7280">{{ label }}</div></td>
+{% endfor %}
+</tr></table>
+<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px 18px;margin-top:12px;font-size:14px;line-height:1.55;white-space:pre-wrap">{{ s.narrative }}</div>
+<h3 style="font-size:15px;margin:18px 0 8px">Best opportunities</h3>
+{% for b in st.best %}
+<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;margin-bottom:8px">
+<a href="{{ b.url }}" style="font-weight:600;color:#1d4ed8;text-decoration:none">{{ b.title }}</a>
+<span style="float:right;font-weight:700">{{ b.score }}</span>
+<div style="font-size:13px;color:#4b5563">{{ b.company }} &middot; {{ b.location }} &middot; {{ b.salary }} &middot; {{ b.platforms }}</div>
+</div>
+{% else %}<p style="color:#6b7280;font-size:14px">No scored opportunities in this period.</p>{% endfor %}
+<p style="font-size:13px;color:#4b5563">Most active platforms: {% for p, n in st.platforms %}{{ p }} ({{ n }}){% if not loop.last %}, {% endif %}{% else %}none{% endfor %}</p>
+<a href="{{ base_url }}/summaries" style="color:#1d4ed8;font-size:13px">View in dashboard</a>
+</div></body></html>

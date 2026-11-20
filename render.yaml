@@ -1,0 +1,39 @@
+# Render Blueprint: dashboard + always-on background worker + managed Postgres.
+# New > Blueprint in Render, point it at this repo, then fill in the secret values.
+services:
+  - type: web
+    name: ghl-job-hunter-web
+    runtime: docker
+    plan: starter
+    healthCheckPath: /healthz
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase: { name: ghl-job-hunter-db, property: connectionString }
+      - key: SECRET_KEY
+        generateValue: true
+      - fromGroup: ghl-job-hunter-secrets
+  - type: worker
+    name: ghl-job-hunter-worker
+    runtime: docker
+    plan: starter
+    dockerCommand: python -m app.worker
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase: { name: ghl-job-hunter-db, property: connectionString }
+      - fromGroup: ghl-job-hunter-secrets
+databases:
+  - name: ghl-job-hunter-db
+    plan: basic-256mb
+envVarGroups:
+  - name: ghl-job-hunter-secrets
+    envVars:
+      - { key: ADMIN_PASSWORD, sync: false }
+      - { key: ANTHROPIC_API_KEY, sync: false }
+      - { key: SERPER_API_KEY, sync: false }
+      - { key: SERPAPI_API_KEY, sync: false }
+      - { key: RESEND_API_KEY, sync: false }
+      - { key: EMAIL_FROM, sync: false }
+      - { key: EMAIL_TO, sync: false }
+      - { key: PUBLIC_BASE_URL, sync: false }
+      - { key: HEALTHCHECK_PING_URL, sync: false }
+      - { key: APP_TIMEZONE, value: Asia/Karachi }
