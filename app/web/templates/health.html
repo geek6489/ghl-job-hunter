@@ -1,8 +1,8 @@
 {% extends "base.html" %}{% block content %}
 <div class="page-head"><h1>System health</h1><form method="post" action="/run-now"><button class="btn">Run a scan now</button></form></div>
-{% if queued %}<p class="ok">Scan queued. The worker starts it within a minute.</p>{% endif %}
+{% if queued %}<p class="ok">Scan queued. {{ "It runs at the next hourly GitHub Actions run (or trigger the workflow by hand on GitHub)." if worker_mode == "scheduled" else "The worker starts it within a minute." }}</p>{% endif %}
 <div class="kpis">
-  <div class="kpi {{ 'ex' if hb_fresh else 'bad' }}"><b>{{ 'Running' if hb_fresh else 'Not responding' }}</b><span>Worker · last heartbeat {{ hb and (hb|replace('T',' '))[:16] ~ ' UTC' or 'never' }}</span></div>
+  <div class="kpi {{ 'ex' if hb_fresh else 'bad' }}"><b>{{ 'Running' if hb_fresh else 'Not responding' }}</b><span>Worker ({{ worker_mode }}) · last heartbeat {{ hb and (hb|replace('T',' '))[:16] ~ ' UTC' or 'never' }}</span></div>
   <div class="kpi"><b>Every {{ interval }} min</b><span>Scan frequency</span></div>
   <div class="kpi"><b>${{ '%.2f'|format(total_cost) }}</b><span>API spend this month (estimated)</span></div>
   <div class="kpi"><b>${{ '%.2f'|format(projected) }}</b><span>Projected for 30 days</span></div>

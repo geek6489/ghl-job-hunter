@@ -37,7 +37,9 @@ def monitor_tick() -> None:
         interval = int(settings_store.get(s, "monitor_interval_minutes", 60))
         last = settings_store.get(s, "last_run_started_at")
         requested = settings_store.get(s, "run_requested")
-        due = not last or utcnow() - datetime.fromisoformat(last) >= timedelta(minutes=interval)
+        # Scheduled (GitHub Actions) runs start a few minutes early or late, so allow 10 minutes of slack.
+        slack = 10 if settings_store.get(s, "worker_mode") == "scheduled" else 0
+        due = not last or utcnow() - datetime.fromisoformat(last) >= timedelta(minutes=interval - slack)
         if not (due or requested):
             return
         if not _monitor_lock.acquire(blocking=False):
@@ -116,6 +118,7 @@ def main() -> None:
     init_db()
     with session_scope() as s:
         settings_store.ensure_defaults(s)
+        settings_store.put(s, "worker_mode", "always-on")
     sched = BlockingScheduler(timezone="UTC", job_defaults={"coalesce": True, "max_instances": 1, "misfire_grace_time": 300})
     sched.add_job(_safe(heartbeat), "interval", minutes=1, id="heartbeat", next_run_time=datetime.now())
     sched.add_job(_safe(monitor_tick), "interval", minutes=1, id="monitor", next_run_time=datetime.now())

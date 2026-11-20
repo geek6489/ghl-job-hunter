@@ -36,6 +36,14 @@ templates.env.filters["local"] = fmt_local
 templates.env.globals["NOT_SPECIFIED"] = NOT_SPECIFIED
 
 
+def heartbeat_limit(s) -> timedelta:
+    """How old the worker heartbeat may be before we call it stopped. The always-on worker beats
+    every minute; the GitHub Actions schedule only beats once per hourly run."""
+    if settings_store.get(s, "worker_mode") == "scheduled":
+        return timedelta(minutes=max(int(settings_store.get(s, "monitor_interval_minutes", 60)), 60) + 45)
+    return timedelta(minutes=15)
+
+
 def score_class(score):
     if score is None:
         return "s-none"
@@ -56,7 +64,7 @@ async def watchdog_loop():
                 last_run = settings_store.get(s, "last_run_finished_at")
                 alerted = settings_store.get(s, "watchdog_alerted_at")
                 now = utcnow()
-                stale_hb = not hb or now - datetime.fromisoformat(hb) > timedelta(minutes=15)
+                stale_hb = not hb or now - datetime.fromisoformat(hb) > heartbeat_limit(s)
                 stale_run = last_run and now - datetime.fromisoformat(last_run) > timedelta(minutes=interval * 2 + 30)
                 if (stale_hb or stale_run) and not alerted:
                     body = (f"Last worker heartbeat: {fmt_local(datetime.fromisoformat(hb)) if hb else 'never'}\n"
@@ -149,7 +157,7 @@ def logout(request: Request):
 def healthz():
     with session_scope() as s:
         hb = settings_store.get(s, "worker_heartbeat")
-    fresh = bool(hb) and utcnow() - datetime.fromisoformat(hb) < timedelta(minutes=15)
+        fresh = bool(hb) and utcnow() - datetime.fromisoformat(hb) < heartbeat_limit(s)
     return {"web": "ok", "worker": "ok" if fresh else "stale", "worker_heartbeat": hb}
 
 
@@ -423,7 +431,8 @@ def health(request: Request, queued: str = ""):
         days = max(1, (now - month_start).days + 1)
         total_cost = sum((u[4] or 0) for u in usage)
         return render(
-            request, "health.html", hb=hb, hb_fresh=bool(hb) and now - datetime.fromisoformat(hb) < timedelta(minutes=15),
+            request, "health.html", hb=hb, hb_fresh=bool(hb) and now - datetime.fromisoformat(hb) < heartbeat_limit(s),
+            worker_mode=settings_store.get(s, "worker_mode") or "not started",
             runs=runs, failures=failures, usage=usage, total_cost=total_cost,
             projected=total_cost / days * 30, notes=notes, last24=last24, coverage=platform_coverage(), cfg=cfg,
             queued=queued, interval=settings_store.get(s, "monitor_interval_minutes", 60),

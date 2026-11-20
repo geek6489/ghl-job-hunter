@@ -1,0 +1,20 @@
+# Free dashboard on Render (no worker, no Render database).
+# Monitoring runs on GitHub Actions; both read the same Neon Postgres database.
+# In Render: New > Blueprint, pick this repo, and set the Blueprint file path to render-free.yaml.
+services:
+  - type: web
+    name: ghl-job-hunter-web
+    runtime: docker
+    plan: free
+    healthCheckPath: /healthz
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - { key: DATABASE_URL, sync: false }
+      - { key: ADMIN_PASSWORD, sync: false }
+      - { key: PUBLIC_BASE_URL, sync: false }
+      - { key: RESEND_API_KEY, sync: false }
+      - { key: EMAIL_FROM, sync: false }
+      - { key: EMAIL_TO, sync: false }
+      - { key: ANTHROPIC_API_KEY, sync: false }
+      - { key: APP_TIMEZONE, value: Asia/Karachi }
