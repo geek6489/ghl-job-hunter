@@ -62,3 +62,20 @@ def test_pages_filters_tracker_and_settings(net):
         assert c.get("/api/jobs").status_code == 200
         # cross-site POSTs are refused
         assert c.post("/run-now", headers={"origin": "https://evil.example"}).status_code == 403
+
+
+def test_mark_applied_moves_job_to_applied_screen(net):
+    with session_scope() as s:
+        run_monitor(s, trigger="manual", sources=[WebSearchSource(), RemotiveSource()])
+        jid = s.scalars(select(Job).where(Job.is_job_posting.is_(True))).first().id
+    with client() as c:
+        login(c)
+        assert 'data-apply="%s" aria-pressed="false"' % jid in c.get("/").text
+        r = c.post(f"/jobs/{jid}/applied", data={"applied": "1"})
+        assert r.json()["tracker_status"] == "Applied"
+        page = c.get("/").text
+        assert 'data-apply="%s" aria-pressed="true"' % jid in page
+        c.post(f"/jobs/{jid}/applied", data={"applied": "0"})
+        with session_scope() as s:
+            j = s.get(Job, jid)
+            assert j.tracker_status == "New" and j.applied_at is None
