@@ -70,11 +70,11 @@ def test_mark_applied_moves_job_to_applied_screen(net):
         jid = s.scalars(select(Job).where(Job.is_job_posting.is_(True))).first().id
     with client() as c:
         login(c)
-        assert 'data-apply="%s" aria-pressed="false"' % jid in c.get("/").text
+        assert 'data-act="apply" data-id="%s"' % jid in c.get("/").text
         r = c.post(f"/jobs/{jid}/applied", data={"applied": "1"})
         assert r.json()["tracker_status"] == "Applied"
         page = c.get("/").text
-        assert 'data-apply="%s" aria-pressed="true"' % jid in page
+        assert 'class="jc st-applied" data-id="%s"' % jid in page
         c.post(f"/jobs/{jid}/applied", data={"applied": "0"})
         with session_scope() as s:
             j = s.get(Job, jid)
@@ -91,3 +91,18 @@ def test_health_shows_worker_keys_not_dashboard_keys():
         page = c.get("/health").text
         assert "Web search API (Serper)" in page
         assert 'class="y">Email (resend)' in page
+
+
+def test_not_relevant_moves_job_to_its_own_screen(net):
+    with session_scope() as s:
+        run_monitor(s, trigger="manual", sources=[WebSearchSource(), RemotiveSource()])
+        jid = s.scalars(select(Job).where(Job.is_job_posting.is_(True))).first().id
+    with client() as c:
+        login(c)
+        assert 'class="jc st-open" data-id="%s"' % jid in c.get("/").text
+        assert c.post(f"/jobs/{jid}/hide", data={"hidden": "1"}).json()["tracker_status"] == "Not Interested"
+        page = c.get("/").text
+        assert 'class="jc st-hidden" data-id="%s"' % jid in page
+        assert 'class="jc st-open" data-id="%s"' % jid not in page
+        c.post(f"/jobs/{jid}/hide", data={"hidden": "0"})
+        assert 'class="jc st-open" data-id="%s"' % jid in c.get("/").text

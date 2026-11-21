@@ -5,7 +5,7 @@
 <title>{% block title %}Opportunities{% endblock %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/style.css?v=14">
+<link rel="stylesheet" href="/static/style.css?v=15">
 <script>try{var d=document.documentElement;d.dataset.mode=localStorage.getItem('opp-mode')||'dark';d.dataset.accent=localStorage.getItem('opp-accent')||'forest';}catch(e){}</script>
 </head>
 <body>
@@ -89,14 +89,16 @@ document.addEventListener('click', async (e) => {
   setTimeout(() => { btn.textContent = old; btn.classList.remove('done'); }, 1600);
 });
 
-// Two swipeable screens on the board: Opportunities and Applied
+// Swipeable screens on the board: Opportunities, Applied, Not relevant
 (function(){
   const sc = document.getElementById('screens'); if (!sc) return;
+  const screens = [...sc.children], last = screens.length - 1, HASH = ['', '#applied', '#not-relevant'];
   const tabs = document.querySelectorAll('[data-go]'), dots = document.querySelectorAll('.dots i');
-  const go = (i) => sc.scrollTo({left: i ? sc.children[1].offsetLeft - sc.offsetLeft : 0, behavior: 'smooth'});
-  const mark = () => { const i = sc.scrollLeft > sc.clientWidth / 2 ? 1 : 0;
+  const cur = () => { const w = screens[1].offsetLeft - screens[0].offsetLeft || 1; return Math.max(0, Math.min(last, Math.round(sc.scrollLeft / w))); };
+  const go = (i) => sc.scrollTo({left: screens[i].offsetLeft - sc.offsetLeft, behavior: 'smooth'});
+  const mark = () => { const i = cur();
     tabs.forEach(t => t.classList.toggle('on', +t.dataset.go === i)); dots.forEach((d, k) => d.classList.toggle('on', k === i));
-    try { history.replaceState(null, '', i ? '#applied' : location.pathname + location.search); } catch (_) {} };
+    try { history.replaceState(null, '', HASH[i] || location.pathname + location.search); } catch (_) {} };
   tabs.forEach(t => t.addEventListener('click', () => go(+t.dataset.go)));
   sc.addEventListener('scroll', () => { clearTimeout(sc._t); sc._t = setTimeout(mark, 60); });
   // Trackpad swipe (two fingers sideways, like switching desktops on a Mac): one gesture flips one whole screen.
@@ -108,13 +110,14 @@ document.addEventListener('click', async (e) => {
     clearTimeout(idle); idle = setTimeout(() => { acc = 0; locked = false; }, 220);
     if (locked) return;
     acc += e.deltaX;
-    const cur = sc.scrollLeft > sc.clientWidth / 2 ? 1 : 0;
-    if (acc > 25 && cur === 0) { locked = true; go(1); }
-    else if (acc < -25 && cur === 1) { locked = true; go(0); }
+    const i = cur();
+    if (acc > 25 && i < last) { locked = true; go(i + 1); }
+    else if (acc < -25 && i > 0) { locked = true; go(i - 1); }
   }, {passive: false});
   document.addEventListener('keydown', (e) => { if (e.target.closest('input,textarea,select')) return;
-    if (e.key === 'ArrowRight') go(1); if (e.key === 'ArrowLeft') go(0); });
-  if (location.hash === '#applied') { sc.style.scrollBehavior = 'auto'; sc.scrollLeft = sc.scrollWidth; mark(); }
+    if (e.key === 'ArrowRight' && cur() < last) go(cur() + 1); if (e.key === 'ArrowLeft' && cur() > 0) go(cur() - 1); });
+  const start = HASH.indexOf(location.hash);
+  if (start > 0) { sc.style.scrollBehavior = 'auto'; sc.scrollLeft = screens[start].offsetLeft - sc.offsetLeft; sc.style.scrollBehavior = ''; mark(); }
 
   const refresh = () => {
     document.querySelectorAll('[data-lane-box]').forEach(box => {
@@ -122,29 +125,33 @@ document.addEventListener('click', async (e) => {
       box.querySelector('.n').textContent = n;
       box.querySelector('.empty').hidden = n > 0;
     });
-    const total = sc.children[1].querySelectorAll('.jc').length;
-    document.getElementById('applied-count').textContent = total;
-    const t = document.getElementById('applied-total'); if (t) t.textContent = total;
+    const count = (k) => screens[k].querySelectorAll('.jc').length;
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('applied-count', count(1)); set('applied-total', count(1));
+    set('hidden-count', count(2)); set('hidden-total', count(2));
   };
   refresh();
+  // act -> [url, form value, new state, screen it moves to]
+  const ACTS = {apply: ['applied', '1', 'applied', 1], unapply: ['applied', '0', 'open', 0],
+                hide: ['hide', '1', 'hidden', 2], unhide: ['hide', '0', 'open', 0]};
   document.addEventListener('click', async (e) => {
-    const btn = e.target.closest('[data-apply]'); if (!btn) return;
-    const card = btn.closest('.jc'), nowApplied = btn.getAttribute('aria-pressed') !== 'true';
+    const btn = e.target.closest('[data-act]'); if (!btn) return;
+    const [path, val, state, to] = ACTS[btn.dataset.act];
+    const card = btn.closest('.jc'), wasApplied = card.classList.contains('st-applied');
     btn.disabled = true;
     try {
-      const body = new URLSearchParams({applied: nowApplied ? '1' : '0'});
-      const r = await fetch('/jobs/' + btn.dataset.apply + '/applied', {method: 'POST', body, credentials: 'same-origin'});
+      const body = new URLSearchParams({[path === 'applied' ? 'applied' : 'hidden']: val});
+      const r = await fetch('/jobs/' + btn.dataset.id + '/' + path, {method: 'POST', body, credentials: 'same-origin'});
       if (!r.ok) throw new Error(r.status);
       card.classList.add('leaving');
       await new Promise(res => setTimeout(res, 260));
-      const target = sc.children[nowApplied ? 1 : 0].querySelector('[data-lane-box="' + card.dataset.lane + '"] .lane-body');
-      btn.setAttribute('aria-pressed', nowApplied ? 'true' : 'false');
-      card.classList.toggle('is-applied', nowApplied);
-      card.querySelector('.tr').textContent = nowApplied ? 'Applied just now' : '';
-      target.prepend(card);
+      card.classList.remove('st-open', 'st-applied', 'st-hidden'); card.classList.add('st-' + state);
+      card.querySelector('.tr').textContent = state === 'applied' ? 'Applied just now' : '';
+      screens[to].querySelector('[data-lane-box="' + card.dataset.lane + '"] .lane-body').prepend(card);
       card.classList.remove('leaving'); card.classList.add('arrived');
       setTimeout(() => card.classList.remove('arrived'), 900);
-      const w = document.getElementById('applied-week'); if (w) w.textContent = Math.max(0, +w.textContent + (nowApplied ? 1 : -1));
+      const w = document.getElementById('applied-week');
+      if (w && (state === 'applied' || wasApplied)) w.textContent = Math.max(0, +w.textContent + (state === 'applied' ? 1 : -1));
       refresh();
     } catch (err) {
       btn.classList.add('failed'); setTimeout(() => btn.classList.remove('failed'), 1500);
