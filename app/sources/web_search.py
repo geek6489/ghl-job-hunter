@@ -5,12 +5,15 @@ Uses a licensed search API (Serper.dev's Google results, or Brave Search API) wi
 No platform is scraped directly."""
 from __future__ import annotations
 
+import logging
 import re
 
 from ..config import get_config
 from ..http import get_json, post_json
 from ..normalize import HIRING_TERMS, detect_platform, parse_date, platform_post_id
 from .base import FetchContext, RawJob, Source, chunk_or_groups, take_rotating
+
+log = logging.getLogger(__name__)
 
 SOCIAL_EXCLUDES = "-site:linkedin.com -site:facebook.com -site:instagram.com -site:x.com -site:twitter.com"
 
@@ -117,6 +120,10 @@ class WebSearchSource(Source):
                 results = self._search(query, 7 if ctx.weekly_sweep else 1)
             except Exception as exc:  # logged, never fatal for the run
                 ctx.log_search(self.provider, platform, query, False, 0, str(exc))
+                failures = getattr(self, "_failures", 0) + 1
+                self._failures = failures
+                if failures == 1:  # show the provider's reason once in the run log (GitHub Actions output)
+                    log.warning("%s search failed: %s | query: %s", self.provider, exc, query[:200])
                 continue
             ctx.record_usage(self.provider, 1, cost)
             kept = 0

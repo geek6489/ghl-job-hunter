@@ -226,6 +226,23 @@ def overview(request: Request, days: int = 30):
         week_ago = utcnow() - timedelta(days=7)
         stats["applied_week"] = sum(1 for j in applied_jobs if j.applied_at and j.applied_at >= week_ago)
         last_run = s.scalar(select(MonitorRun).order_by(MonitorRun.id.desc()).limit(1))
+        # Hourly scan log: the latest runs, newest first, with a note on gaps longer than an hour and a half
+        from zoneinfo import ZoneInfo
+        _tz = ZoneInfo(cfg.timezone)
+        scan_log, prev = [], None
+        for r in s.scalars(select(MonitorRun).order_by(MonitorRun.id.desc()).limit(12)):
+            st = r.stats or {}
+            gap_h = round((prev - r.started_at).total_seconds() / 3600) if prev else 0
+            scan_log.append({"at": r.started_at.replace(tzinfo=timezone.utc).astimezone(_tz), "status": r.status,
+                             "trigger": r.trigger, "found": st.get("raw", 0), "new": st.get("new", 0),
+                             "emailed": st.get("emailed", 0), "gap_before": gap_h if gap_h >= 2 else 0,
+                             "error": (r.error or "")[-300:]})
+            prev = r.started_at
+        since_last_h = (utcnow() - last_run.started_at).total_seconds() / 3600 if last_run else None
+        nxt = datetime.now(_tz).replace(second=0, microsecond=0)
+        nxt = nxt.replace(minute=7) + (timedelta(hours=1) if nxt.minute >= 7 else timedelta(0))
+        scan_info = {"next": nxt, "today": datetime.now(_tz).date(), "overdue": since_last_h is not None and since_last_h > 1.6,
+                     "hours_since": int(since_last_h) if since_last_h else 0}
         # Jobs found per day for the last 7 days (local time), for the small chart
         from zoneinfo import ZoneInfo
         tz = ZoneInfo(cfg.timezone)
@@ -244,7 +261,8 @@ def overview(request: Request, days: int = 30):
         first_name = (prefs.get("applicant_name") or "").split(" ")[0]
         return render(request, "overview.html", stats=stats, lanes=lanes, lane_info=LANES, days=days, week=week,
                       greeting=greeting, first_name=first_name, applied=applied,
-                      last_run=last_run, claude=cfg.claude_enabled, now=utcnow())
+                      last_run=last_run, claude=cfg.claude_enabled, now=utcnow(),
+                      scan_log=scan_log, scan_info=scan_info)
 
 
 # --------------------------------------------------------------------------- jobs

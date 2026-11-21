@@ -99,6 +99,19 @@ document.addEventListener('click', async (e) => {
     try { history.replaceState(null, '', i ? '#applied' : location.pathname + location.search); } catch (_) {} };
   tabs.forEach(t => t.addEventListener('click', () => go(+t.dataset.go)));
   sc.addEventListener('scroll', () => { clearTimeout(sc._t); sc._t = setTimeout(mark, 60); });
+  // Trackpad swipe (two fingers sideways, like switching desktops on a Mac): one gesture flips one whole screen.
+  // Without this, a short swipe scrolls part way and the snap pulls it back.
+  let acc = 0, locked = false, idle;
+  sc.addEventListener('wheel', (e) => {
+    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+    e.preventDefault();
+    clearTimeout(idle); idle = setTimeout(() => { acc = 0; locked = false; }, 220);
+    if (locked) return;
+    acc += e.deltaX;
+    const cur = sc.scrollLeft > sc.clientWidth / 2 ? 1 : 0;
+    if (acc > 25 && cur === 0) { locked = true; go(1); }
+    else if (acc < -25 && cur === 1) { locked = true; go(0); }
+  }, {passive: false});
   document.addEventListener('keydown', (e) => { if (e.target.closest('input,textarea,select')) return;
     if (e.key === 'ArrowRight') go(1); if (e.key === 'ArrowLeft') go(0); });
   if (location.hash === '#applied') { sc.style.scrollBehavior = 'auto'; sc.scrollLeft = sc.scrollWidth; mark(); }
