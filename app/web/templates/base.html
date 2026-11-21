@@ -5,7 +5,7 @@
 <title>{% block title %}Opportunities{% endblock %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/style.css?v=11">
+<link rel="stylesheet" href="/static/style.css?v=13">
 <script>try{var d=document.documentElement;d.dataset.mode=localStorage.getItem('opp-mode')||'dark';d.dataset.accent=localStorage.getItem('opp-accent')||'forest';}catch(e){}</script>
 </head>
 <body>
@@ -77,5 +77,55 @@ document.addEventListener('click', async (e) => {
   const old = btn.textContent; btn.textContent = 'Copied'; btn.classList.add('done');
   setTimeout(() => { btn.textContent = old; btn.classList.remove('done'); }, 1600);
 });
+
+// Two swipeable screens on the board: Opportunities and Applied
+(function(){
+  const sc = document.getElementById('screens'); if (!sc) return;
+  const tabs = document.querySelectorAll('[data-go]'), dots = document.querySelectorAll('.dots i');
+  const go = (i) => sc.scrollTo({left: i ? sc.children[1].offsetLeft - sc.offsetLeft : 0, behavior: 'smooth'});
+  const mark = () => { const i = sc.scrollLeft > sc.clientWidth / 2 ? 1 : 0;
+    tabs.forEach(t => t.classList.toggle('on', +t.dataset.go === i)); dots.forEach((d, k) => d.classList.toggle('on', k === i));
+    try { history.replaceState(null, '', i ? '#applied' : location.pathname + location.search); } catch (_) {} };
+  tabs.forEach(t => t.addEventListener('click', () => go(+t.dataset.go)));
+  sc.addEventListener('scroll', () => { clearTimeout(sc._t); sc._t = setTimeout(mark, 60); });
+  document.addEventListener('keydown', (e) => { if (e.target.closest('input,textarea,select')) return;
+    if (e.key === 'ArrowRight') go(1); if (e.key === 'ArrowLeft') go(0); });
+  if (location.hash === '#applied') { sc.style.scrollBehavior = 'auto'; sc.scrollLeft = sc.scrollWidth; mark(); }
+
+  const refresh = () => {
+    document.querySelectorAll('[data-lane-box]').forEach(box => {
+      const n = box.querySelectorAll('.jc').length;
+      box.querySelector('.n').textContent = n;
+      box.querySelector('.empty').hidden = n > 0;
+    });
+    const total = sc.children[1].querySelectorAll('.jc').length;
+    document.getElementById('applied-count').textContent = total;
+    const t = document.getElementById('applied-total'); if (t) t.textContent = total;
+  };
+  refresh();
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-apply]'); if (!btn) return;
+    const card = btn.closest('.jc'), nowApplied = btn.getAttribute('aria-pressed') !== 'true';
+    btn.disabled = true;
+    try {
+      const body = new URLSearchParams({applied: nowApplied ? '1' : '0'});
+      const r = await fetch('/jobs/' + btn.dataset.apply + '/applied', {method: 'POST', body, credentials: 'same-origin'});
+      if (!r.ok) throw new Error(r.status);
+      card.classList.add('leaving');
+      await new Promise(res => setTimeout(res, 260));
+      const target = sc.children[nowApplied ? 1 : 0].querySelector('[data-lane-box="' + card.dataset.lane + '"] .lane-body');
+      btn.setAttribute('aria-pressed', nowApplied ? 'true' : 'false');
+      card.classList.toggle('is-applied', nowApplied);
+      card.querySelector('.tr').textContent = nowApplied ? 'Applied just now' : '';
+      target.prepend(card);
+      card.classList.remove('leaving'); card.classList.add('arrived');
+      setTimeout(() => card.classList.remove('arrived'), 900);
+      const w = document.getElementById('applied-week'); if (w) w.textContent = Math.max(0, +w.textContent + (nowApplied ? 1 : -1));
+      refresh();
+    } catch (err) {
+      btn.classList.add('failed'); setTimeout(() => btn.classList.remove('failed'), 1500);
+    } finally { btn.disabled = false; }
+  });
+})();
 </script>
 </body></html>

@@ -1,56 +1,5 @@
-{% extends "base.html" %}{% from "_macros.html" import message_box %}{% block content %}
-<header class="hero">
-  <div>
-    <p class="hello">{{ greeting }}{% if first_name %}, {{ first_name }}{% endif %} <span class="live {{ 'st-' ~ last_run.status if last_run }}">{% if last_run %}scanned {{ last_run.started_at|ago }}{% else %}waiting for first scan{% endif %}</span></p>
-    <h1><b>{{ stats.today }}</b> new {{ 'opportunity' if stats.today == 1 else 'opportunities' }} landed today</h1>
-  </div>
-  <form method="get" class="seg">{% for d, l in [(1,'24h'),(3,'3d'),(7,'7d'),(30,'30d')] %}<button name="days" value="{{ d }}" class="{{ 'on' if days==d }}">{{ l }}</button>{% endfor %}</form>
-</header>
-
-<section class="tiles">
-  {% set mx = (week|max) or 1 %}
-  <a class="glass tile" href="/jobs">
-    <div class="t-head"><span class="t-ico">◎</span>Jobs found<em>Last 7 days</em></div>
-    <svg class="spark" viewBox="0 0 120 40" preserveAspectRatio="none" aria-hidden="true">
-      <defs><linearGradient id="sg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" style="stop-color:var(--orange)" stop-opacity=".45"/><stop offset="1" style="stop-color:var(--orange)" stop-opacity="0"/></linearGradient></defs>
-      {% set pts = [] %}{% for v in week %}{% set _ = pts.append(((loop.index0 * 20)|string) ~ ',' ~ ((36 - v / mx * 30)|round(1)|string)) %}{% endfor %}
-      <polygon points="0,40 {{ pts|join(' ') }} 120,40" fill="url(#sg)"/>
-      <polyline points="{{ pts|join(' ') }}" fill="none" style="stroke:var(--orange)" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
-    </svg>
-    <div class="t-num"><b>{{ stats.total }}</b><span>in total</span></div>
-  </a>
-  <a class="glass tile" href="/jobs?sort=newest&posted_within=1">
-    <div class="t-head"><span class="t-ico">✦</span>Lanes<em>This period</em></div>
-    <div class="lane-bars">
-      {% set lmx = (stats.lanes.values()|max) or 1 %}
-      {% for key, label, hint in lane_info %}<div class="lb lb-{{ key }}"><span>{{ label }}</span><i style="--w:{{ (100 * stats.lanes[key] / lmx)|round }}%"></i><b>{{ stats.lanes[key] }}</b></div>{% endfor %}
-    </div>
-  </a>
-  <a class="glass tile" href="/jobs?min_score=75">
-    <div class="t-head"><span class="t-ico">♦</span>Match quality<em>Open jobs</em></div>
-    <div class="gauge">
-      <svg viewBox="0 0 100 56" aria-hidden="true">
-        <path d="M8 50 A42 42 0 0 1 92 50" fill="none" style="stroke:var(--edge)" stroke-width="7" stroke-linecap="round"/>
-        <path d="M8 50 A42 42 0 0 1 92 50" fill="none" stroke="url(#gg)" stroke-width="7" stroke-linecap="round" stroke-dasharray="{{ (stats.strong_pct * 1.3195)|round(1) }} 200"/>
-        <defs><linearGradient id="gg" x1="0" x2="1"><stop offset="0" style="stop-color:var(--acc-a)"/><stop offset="1" style="stop-color:var(--acc-b)"/></linearGradient></defs>
-      </svg>
-      <div><b>{{ stats.strong_pct }}%</b><span>{{ stats.strong }} strong matches</span></div>
-    </div>
-  </a>
-  <a class="glass tile" href="/tracker">
-    <div class="t-head"><span class="t-ico">➚</span>Applied<em>All time</em></div>
-    <div class="t-num big"><b>{{ stats.applied }}</b><span>applications tracked</span></div>
-  </a>
-</section>
-{% if not claude %}<p class="hint">Scores use keyword matching until a Claude key is added.</p>{% endif %}
-
-<div class="lanes">
-{% for key, label, hint in lane_info %}
-  <section class="glass lane lane-{{ key }}">
-    <header class="lane-head" title="{{ hint }}"><span class="l-ico">{{ {'ghl':'G','automation':'A','other':'+'}[key] }}</span><div><h2>{{ label }}</h2><p>{{ hint }}</p></div><span class="n">{{ lanes[key]|length }}</span></header>
-    <div class="lane-body">
-    {% for item in lanes[key] %}{% set j = item.job %}
-      <article class="jc">
+{% extends "base.html" %}{% from "_macros.html" import message_box %}{% macro job_card(item, is_applied) %}{% set j = item.job %}
+      <article class="jc{{ ' is-applied' if is_applied }}" data-id="{{ j.id }}" data-lane="{{ lane_of(j.title) }}">
         <div class="jc-top">
           <a class="jc-title" href="/jobs/{{ j.id }}">{{ j.title }}</a>
           {% if j.score is not none %}<span class="sc {{ j.score|score_class }}" title="{{ j.category or '' }}">{{ j.score }}</span>{% endif %}
@@ -60,12 +9,91 @@
           {% if j.work_arrangement != NOT_SPECIFIED %}<span>{{ j.work_arrangement }}</span>{% endif %}
           {% if j.salary_text != NOT_SPECIFIED %}<span class="pay">{{ j.salary_text }}</span>{% endif %}
         </div>
-        <div class="jc-src"><span>{{ j.platforms|join(', ') }}</span><span>{{ j.discovered_at|ago }}</span>{% if j.tracker_status != 'New' %}<span class="tr">{{ j.tracker_status }}</span>{% endif %}</div>
+        <div class="jc-src"><span>{{ j.platforms|join(', ') }}</span><span>found {{ j.discovered_at|ago }}</span><span class="tr">{% if is_applied %}{{ j.tracker_status }}{% if j.applied_at %} {{ j.applied_at|ago }}{% endif %}{% endif %}</span></div>
         {{ message_box('m-' ~ j.id, item.msg, open_url=j.primary_url) }}
+        <button type="button" class="apply-btn" data-apply="{{ j.id }}" aria-pressed="{{ 'true' if is_applied else 'false' }}">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+          <span class="when-off">Mark as applied</span><span class="when-on">Applied · undo</span>
+        </button>
       </article>
-    {% else %}<p class="empty">No jobs in this period yet.</p>{% endfor %}
+{% endmacro %}
+{% macro lane_grid(groups, is_applied) %}
+<div class="lanes">
+{% for key, label, hint in lane_info %}
+  <section class="glass lane lane-{{ key }}" data-lane-box="{{ key }}">
+    <header class="lane-head" title="{{ hint }}"><span class="l-ico">{{ {'ghl':'G','automation':'A','other':'+'}[key] }}</span><div><h2>{{ label }}</h2><p>{{ 'Jobs you have applied to' if is_applied else hint }}</p></div><span class="n">{{ groups[key]|length }}</span></header>
+    <div class="lane-body">
+    {% for item in groups[key] %}{{ job_card(item, is_applied) }}{% endfor %}
+      <p class="empty">{{ 'Nothing applied here yet. Hit "Mark as applied" on a job and it lands here.' if is_applied else 'No jobs in this period yet.' }}</p>
     </div>
   </section>
 {% endfor %}
 </div>
+{% endmacro %}
+{% block content %}
+<header class="hero">
+  <div>
+    <p class="hello">{{ greeting }}{% if first_name %}, {{ first_name }}{% endif %} <span class="live {{ 'st-' ~ last_run.status if last_run }}">{% if last_run %}scanned {{ last_run.started_at|ago }}{% else %}waiting for first scan{% endif %}</span></p>
+    <h1><b>{{ stats.today }}</b> new {{ 'opportunity' if stats.today == 1 else 'opportunities' }} landed today</h1>
+  </div>
+  <div class="hero-r">
+    <nav class="switch" aria-label="Screens">
+      <button type="button" data-go="0" class="on">Opportunities</button>
+      <button type="button" data-go="1">Applied <span class="badge" id="applied-count">{{ stats.applied }}</span></button>
+    </nav>
+    <form method="get" class="seg">{% for d, l in [(1,'24h'),(3,'3d'),(7,'7d'),(30,'30d')] %}<button name="days" value="{{ d }}" class="{{ 'on' if days==d }}">{{ l }}</button>{% endfor %}</form>
+  </div>
+</header>
+<div class="screens" id="screens">
+  <section class="screen" aria-label="Opportunities">
+<section class="tiles">
+    {% set mx = (week|max) or 1 %}
+    <a class="glass tile" href="/jobs">
+      <div class="t-head"><span class="t-ico">◎</span>Jobs found<em>Last 7 days</em></div>
+      <svg class="spark" viewBox="0 0 120 40" preserveAspectRatio="none" aria-hidden="true">
+        <defs><linearGradient id="sg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" style="stop-color:var(--orange)" stop-opacity=".45"/><stop offset="1" style="stop-color:var(--orange)" stop-opacity="0"/></linearGradient></defs>
+        {% set pts = [] %}{% for v in week %}{% set _ = pts.append(((loop.index0 * 20)|string) ~ ',' ~ ((36 - v / mx * 30)|round(1)|string)) %}{% endfor %}
+        <polygon points="0,40 {{ pts|join(' ') }} 120,40" fill="url(#sg)"/>
+        <polyline points="{{ pts|join(' ') }}" fill="none" style="stroke:var(--orange)" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
+      </svg>
+      <div class="t-num"><b>{{ stats.total }}</b><span>in total</span></div>
+    </a>
+    <a class="glass tile" href="/jobs?sort=newest&posted_within=1">
+      <div class="t-head"><span class="t-ico">✦</span>Lanes<em>This period</em></div>
+      <div class="lane-bars">
+        {% set lmx = (stats.lanes.values()|max) or 1 %}
+        {% for key, label, hint in lane_info %}<div class="lb lb-{{ key }}"><span>{{ label }}</span><i style="--w:{{ (100 * stats.lanes[key] / lmx)|round }}%"></i><b>{{ stats.lanes[key] }}</b></div>{% endfor %}
+      </div>
+    </a>
+    <a class="glass tile" href="/jobs?min_score=75">
+      <div class="t-head"><span class="t-ico">♦</span>Match quality<em>Open jobs</em></div>
+      <div class="gauge">
+        <svg viewBox="0 0 100 56" aria-hidden="true">
+          <path d="M8 50 A42 42 0 0 1 92 50" fill="none" style="stroke:var(--edge)" stroke-width="7" stroke-linecap="round"/>
+          <path d="M8 50 A42 42 0 0 1 92 50" fill="none" stroke="url(#gg)" stroke-width="7" stroke-linecap="round" stroke-dasharray="{{ (stats.strong_pct * 1.3195)|round(1) }} 200"/>
+          <defs><linearGradient id="gg" x1="0" x2="1"><stop offset="0" style="stop-color:var(--acc-a)"/><stop offset="1" style="stop-color:var(--acc-b)"/></linearGradient></defs>
+        </svg>
+        <div><b>{{ stats.strong_pct }}%</b><span>{{ stats.strong }} strong matches</span></div>
+      </div>
+    </a>
+    <a class="glass tile" href="/tracker">
+      <div class="t-head"><span class="t-ico">➚</span>Applied<em>All time</em></div>
+      <div class="t-num big"><b>{{ stats.applied }}</b><span>applications tracked</span></div>
+    </a>
+  </section>
+  {% if not claude %}<p class="hint">Scores use keyword matching until a Claude key is added.</p>{% endif %}
+  
+  
+    {{ lane_grid(lanes, False) }}
+  </section>
+  <section class="screen" aria-label="Applied jobs">
+    <div class="applied-head glass">
+      <div><b id="applied-total">{{ stats.applied }}</b><span>applications in total</span></div>
+      <div><b id="applied-week">{{ stats.applied_week }}</b><span>in the last 7 days</span></div>
+      <p>Swipe back with two fingers, or use the switch above. Move a job back with "Applied · undo".</p>
+    </div>
+    {{ lane_grid(applied, True) }}
+  </section>
+</div>
+<div class="dots" aria-hidden="true"><i class="on"></i><i></i></div>
 {% endblock %}

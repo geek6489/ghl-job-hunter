@@ -22,6 +22,8 @@ from starlette.middleware.sessions import SessionMiddleware
 from .. import settings_store
 from ..analysis import category_for
 from ..board import LANES, application_message, lane_for
+
+APPLIED_STATUSES = ["Applied", "Interview Scheduled", "Offer Received", "Rejected"]
 from ..config import get_config
 from ..coverage import platform_coverage
 from ..db import init_db, session_scope
@@ -75,6 +77,7 @@ def today_local() -> str:
 
 
 templates.env.globals["today_local"] = today_local
+templates.env.globals["lane_of"] = lane_for
 
 
 async def watchdog_loop():
@@ -200,17 +203,28 @@ def overview(request: Request, days: int = 30):
             "total": s.scalar(base),
             "today": s.scalar(base.where(Job.discovered_at >= since)),
             "strong": s.scalar(base.where(Job.score >= 75, Job.status.in_(["New", "Active"]))),
-            "applied": s.scalar(base.where(Job.tracker_status.in_(["Applied", "Interview Scheduled", "Offer Received", "Rejected"]))),
+            "applied": s.scalar(base.where(Job.tracker_status.in_(APPLIED_STATUSES))),
         }
         cutoff = utcnow() - timedelta(days=days)
         jobs = list(s.scalars(
-            select(Job).where(Job.is_job_posting.is_(True), Job.status.in_(["New", "Active"]), Job.discovered_at >= cutoff)
+            select(Job).where(Job.is_job_posting.is_(True), Job.status.in_(["New", "Active"]), Job.discovered_at >= cutoff,
+                              Job.tracker_status.not_in(APPLIED_STATUSES + ["Not Interested"]))
             .order_by(Job.discovered_at.desc()).limit(600)
         ))
         lanes = {key: [] for key, _, _ in LANES}
         for j in jobs:
             _ = j.sources
             lanes[lane_for(j.title)].append({"job": j, "msg": application_message(j, prefs)})
+        applied_jobs = list(s.scalars(
+            select(Job).where(Job.tracker_status.in_(APPLIED_STATUSES))
+            .order_by(Job.applied_at.desc().nulls_last(), Job.tracker_updated_at.desc().nulls_last()).limit(600)
+        ))
+        applied = {key: [] for key, _, _ in LANES}
+        for j in applied_jobs:
+            _ = j.sources
+            applied[lane_for(j.title)].append({"job": j, "msg": application_message(j, prefs)})
+        week_ago = utcnow() - timedelta(days=7)
+        stats["applied_week"] = sum(1 for j in applied_jobs if j.applied_at and j.applied_at >= week_ago)
         last_run = s.scalar(select(MonitorRun).order_by(MonitorRun.id.desc()).limit(1))
         # Jobs found per day for the last 7 days (local time), for the small chart
         from zoneinfo import ZoneInfo
@@ -229,7 +243,7 @@ def overview(request: Request, days: int = 30):
         greeting = "Good morning" if 5 <= hour < 12 else "Good afternoon" if hour < 17 else "Good evening"
         first_name = (prefs.get("applicant_name") or "").split(" ")[0]
         return render(request, "overview.html", stats=stats, lanes=lanes, lane_info=LANES, days=days, week=week,
-                      greeting=greeting, first_name=first_name,
+                      greeting=greeting, first_name=first_name, applied=applied,
                       last_run=last_run, claude=cfg.claude_enabled, now=utcnow())
 
 
@@ -324,6 +338,24 @@ def update_tracker(job_id: str, tracker_status: str = Form(...), notes: str = Fo
             job.applied_at = utcnow()
         job.tracker_updated_at = utcnow()
     return RedirectResponse(f"/jobs/{job_id}?saved=1", status_code=303)
+
+
+@app.post("/jobs/{job_id}/applied")
+def mark_applied(job_id: str, applied: str = Form("1")):
+    """Quick toggle used by the board's Applied button. Returns JSON so the page can move the card without reloading."""
+    with session_scope() as s:
+        job = s.get(Job, job_id)
+        if not job:
+            raise HTTPException(404)
+        if applied == "1":
+            job.tracker_status = "Applied"
+            job.applied_at = job.applied_at or utcnow()
+        else:
+            job.tracker_status = "New"
+            job.applied_at = None
+        job.tracker_updated_at = utcnow()
+        return {"id": job.id, "tracker_status": job.tracker_status,
+                "applied_at": job.applied_at.isoformat() if job.applied_at else None}
 
 
 @app.post("/jobs/{job_id}/reanalyze")
