@@ -17,11 +17,11 @@
 {% macro message_box(id, msg, open=False, open_url=None) -%}
 <div class="msg" id="{{ id }}">
   <div class="msg-actions">
-    <button type="button" class="btn sm primary" data-copy="{{ id }}">Copy message</button>
-    <button type="button" class="btn sm ghost" data-copy="{{ id }}" data-mode="text" title="Writes the links out in full, for sites that don't keep hyperlinks">Plain text</button>
-    {% if open_url %}<a class="btn sm ghost" href="{{ open_url }}" target="_blank" rel="noopener noreferrer">Open ↗</a>{% endif %}
+    <button type="button" class="act act-main" data-copy="{{ id }}">Copy message</button>
+    <button type="button" class="act" data-copy="{{ id }}" data-mode="text" title="Writes the links out in full, for sites that don't keep hyperlinks">Plain text</button>
+    {% if open_url %}<a class="act" href="{{ open_url }}" target="_blank" rel="noopener noreferrer">Open posting ↗</a>{% endif %}
   </div>
-  <details {{ 'open' if open }}><summary>Preview message</summary><div class="msg-html">{{ msg.html }}</div></details>
+  <details {{ 'open' if open }}><summary>Read the message</summary><div class="msg-html">{{ msg.html }}</div></details>
   <textarea class="msg-text" hidden readonly>{{ msg.text }}</textarea>
 </div>
 {%- endmacro %}

@@ -1,6 +1,6 @@
 {% extends "base.html" %}{% block content %}
 <div class="login card">
-  <h1>Sign in</h1>
+  <h1>The Opportunities Desk</h1><p class="muted">Sign in to see today's postings.</p>
   {% if not configured %}<p class="warn">ADMIN_PASSWORD is not set on the server, so sign-in is disabled.</p>{% endif %}
   {% if error %}<p class="err">{{ error }}</p>{% endif %}
   <form method="post" action="/login">

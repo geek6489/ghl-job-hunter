@@ -69,6 +69,14 @@ def ago(dt) -> str:
 templates.env.filters["ago"] = ago
 
 
+def today_local() -> str:
+    from zoneinfo import ZoneInfo
+    return datetime.now(ZoneInfo(get_config().timezone)).strftime("%A, %d %B %Y")
+
+
+templates.env.globals["today_local"] = today_local
+
+
 async def watchdog_loop():
     """If the worker stops sending heartbeats, email the owner (once per outage)."""
     while True:
