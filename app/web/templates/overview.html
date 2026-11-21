@@ -12,10 +12,10 @@
   <a class="glass tile" href="/jobs">
     <div class="t-head"><span class="t-ico">◎</span>Jobs found<em>Last 7 days</em></div>
     <svg class="spark" viewBox="0 0 120 40" preserveAspectRatio="none" aria-hidden="true">
-      <defs><linearGradient id="sg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ff7a2f" stop-opacity=".45"/><stop offset="1" stop-color="#ff7a2f" stop-opacity="0"/></linearGradient></defs>
+      <defs><linearGradient id="sg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" style="stop-color:var(--orange)" stop-opacity=".45"/><stop offset="1" style="stop-color:var(--orange)" stop-opacity="0"/></linearGradient></defs>
       {% set pts = [] %}{% for v in week %}{% set _ = pts.append(((loop.index0 * 20)|string) ~ ',' ~ ((36 - v / mx * 30)|round(1)|string)) %}{% endfor %}
       <polygon points="0,40 {{ pts|join(' ') }} 120,40" fill="url(#sg)"/>
-      <polyline points="{{ pts|join(' ') }}" fill="none" stroke="#ff7a2f" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
+      <polyline points="{{ pts|join(' ') }}" fill="none" style="stroke:var(--orange)" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
     </svg>
     <div class="t-num"><b>{{ stats.total }}</b><span>in total</span></div>
   </a>
@@ -30,9 +30,9 @@
     <div class="t-head"><span class="t-ico">♦</span>Match quality<em>Open jobs</em></div>
     <div class="gauge">
       <svg viewBox="0 0 100 56" aria-hidden="true">
-        <path d="M8 50 A42 42 0 0 1 92 50" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="7" stroke-linecap="round"/>
+        <path d="M8 50 A42 42 0 0 1 92 50" fill="none" style="stroke:var(--edge)" stroke-width="7" stroke-linecap="round"/>
         <path d="M8 50 A42 42 0 0 1 92 50" fill="none" stroke="url(#gg)" stroke-width="7" stroke-linecap="round" stroke-dasharray="{{ (stats.strong_pct * 1.3195)|round(1) }} 200"/>
-        <defs><linearGradient id="gg" x1="0" x2="1"><stop offset="0" stop-color="#ffb36b"/><stop offset="1" stop-color="#ff5c1f"/></linearGradient></defs>
+        <defs><linearGradient id="gg" x1="0" x2="1"><stop offset="0" style="stop-color:var(--acc-a)"/><stop offset="1" style="stop-color:var(--acc-b)"/></linearGradient></defs>
       </svg>
       <div><b>{{ stats.strong_pct }}%</b><span>{{ stats.strong }} strong matches</span></div>
     </div>
