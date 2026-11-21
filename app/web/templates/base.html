@@ -5,8 +5,8 @@
 <title>{% block title %}Opportunities{% endblock %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/style.css?v=9">
-<script>try{var d=document.documentElement;d.dataset.mode=localStorage.getItem('opp-mode')||'dark';d.dataset.accent=localStorage.getItem('opp-accent')||'ember';}catch(e){}</script>
+<link rel="stylesheet" href="/static/style.css?v=10">
+<script>try{var d=document.documentElement;d.dataset.mode=localStorage.getItem('opp-mode')||'dark';d.dataset.accent=localStorage.getItem('opp-accent')||'lagoon';}catch(e){}</script>
 </head>
 <body>
 <div class="glow g1"></div><div class="glow g2"></div>
@@ -28,6 +28,7 @@
       <div class="modes"><button type="button" data-set-mode="dark">Dark</button><button type="button" data-set-mode="light">Light</button></div>
       <p>Color</p>
       <div class="swatches">
+        <button type="button" data-set-accent="lagoon" title="Lagoon (turquoise and lime)" style="--sw:#2ee6d6;background:linear-gradient(135deg,#2ee6d6 50%,#c6f432 50%)"></button>
         <button type="button" data-set-accent="ember" title="Ember" style="--sw:#ff7a2f"></button>
         <button type="button" data-set-accent="sage" title="Sage" style="--sw:#8fd3b0"></button>
         <button type="button" data-set-accent="glacier" title="Glacier" style="--sw:#6cc7ff"></button>
