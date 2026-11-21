@@ -59,6 +59,20 @@ that it runs every hour by itself.
    emails, "Re-run AI analysis" and outage alerts).
 3. Open the URL and sign in with `admin` and your password.
 
+### Or: dashboard on Vercel (free, no card)
+
+If Render asks for a card, use Vercel's free Hobby plan instead.
+
+1. Sign up at vercel.com with GitHub, then **Add New > Project** and import this repo.
+2. Leave the framework preset as detected (FastAPI or Other). Under **Environment Variables** add
+   `DATABASE_URL`, `ADMIN_PASSWORD`, `SECRET_KEY` (any 40+ random characters), `APP_TIMEZONE`
+   (`Asia/Karachi`) and `PUBLIC_BASE_URL` (your final https address). Click **Deploy**.
+3. Custom domain: project **Settings > Domains**, add e.g. `jobs.yourdomain.com`, then add the CNAME
+   record Vercel shows at your DNS provider.
+
+On Vercel the dashboard runs only while someone is using it, so its "monitoring stopped" watchdog
+is off there. GitHub still emails you when an hourly run fails.
+
 If Render asks for a card for this too, skip it. Run the dashboard on your own computer only when
 you want to look, pointed at the same database:
 

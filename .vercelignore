@@ -1,0 +1,8 @@
+tests/
+docs/
+scripts/
+data/
+Dockerfile
+docker-compose.yml
+render.yaml
+render-free.yaml

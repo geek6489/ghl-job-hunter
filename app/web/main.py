@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import hmac
 import logging
+import os
 import time
 from collections import defaultdict
 from contextlib import asynccontextmanager
@@ -83,9 +84,12 @@ async def lifespan(app: FastAPI):
     init_db()
     with session_scope() as s:
         settings_store.ensure_defaults(s)
-    task = asyncio.create_task(watchdog_loop())
+    # On serverless hosts (Vercel) nothing runs between requests, so the watchdog can't work there.
+    # The hourly GitHub Actions run still emails on failures.
+    task = None if os.environ.get("VERCEL") else asyncio.create_task(watchdog_loop())
     yield
-    task.cancel()
+    if task:
+        task.cancel()
 
 
 cfg = get_config()
