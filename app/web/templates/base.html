@@ -2,18 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{% block title %}GHL Job Hunter{% endblock %}</title>
-<link rel="stylesheet" href="/static/style.css">
+<title>{% block title %}Opportunities · GHL Job Hunter{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css?v=2">
 </head>
 <body>
 {% if request.session.get("user") %}
 <header class="topbar">
-  <a class="brand" href="/"><span class="logo">GJ</span> GHL Job Hunter</a>
+  <a class="brand" href="/"><span class="logo">◆</span><span>Opportunities</span></a>
   <nav>
-    <a href="/" class="{{ 'on' if nav=='overview' }}">Overview</a>
-    <a href="/jobs" class="{{ 'on' if nav in ('jobs','job_detail') }}">Jobs</a>
+    <a href="/" class="{{ 'on' if nav=='overview' }}">Board</a>
+    <a href="/jobs" class="{{ 'on' if nav in ('jobs','job_detail') }}">All jobs</a>
     <a href="/tracker" class="{{ 'on' if nav=='tracker' }}">Tracker</a>
-    <a href="/summaries" class="{{ 'on' if nav=='summaries' }}">Daily summaries</a>
+    <a href="/summaries" class="{{ 'on' if nav=='summaries' }}">Summaries</a>
     <a href="/settings" class="{{ 'on' if nav=='settings' }}">Settings</a>
     <a href="/health" class="{{ 'on' if nav=='health' }}">Health</a>
   </nav>
@@ -21,4 +23,27 @@
 </header>
 {% endif %}
 <main class="wrap">{% block content %}{% endblock %}</main>
+<script>
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-copy]');
+  if (!btn) return;
+  const src = document.getElementById(btn.dataset.copy);
+  const html = src.querySelector('.msg-html').innerHTML;
+  const text = src.querySelector('.msg-text').value;
+  const plain = btn.dataset.mode === 'text';
+  try {
+    if (!plain && window.ClipboardItem) {
+      await navigator.clipboard.write([new ClipboardItem({
+        'text/html': new Blob([html], {type: 'text/html'}),
+        'text/plain': new Blob([text], {type: 'text/plain'})})]);
+    } else {
+      await navigator.clipboard.writeText(text);
+    }
+  } catch (err) {
+    const ta = src.querySelector('.msg-text'); ta.hidden = false; ta.select(); document.execCommand('copy'); ta.hidden = true;
+  }
+  const old = btn.textContent; btn.textContent = 'Copied ✓'; btn.classList.add('done');
+  setTimeout(() => { btn.textContent = old; btn.classList.remove('done'); }, 1600);
+});
+</script>
 </body></html>

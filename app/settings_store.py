@@ -8,6 +8,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .board import DEFAULT_LINKS, DEFAULT_TEMPLATE
 from .models import Keyword, Setting, utcnow
 
 DEFAULT_KEYWORDS: dict[str, list[str]] = {
@@ -49,6 +50,10 @@ DEFAULTS: dict[str, Any] = {
     "salary_min_hourly_usd": None,
     "max_job_age_days": 30,
     "profile": DEFAULT_PROFILE,
+    # Ready-to-send application message shown on every job card
+    "applicant_name": "Hadiul Islam",
+    **DEFAULT_LINKS,
+    "message_template": DEFAULT_TEMPLATE,
 }
 
 

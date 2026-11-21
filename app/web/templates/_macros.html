@@ -14,3 +14,13 @@
   <td><a class="btn sm" href="{{ j.primary_url }}" target="_blank" rel="noopener noreferrer">Open ↗</a></td>
 </tr>
 {%- endmacro %}
+{% macro message_box(id, msg, open=False) -%}
+<div class="msg" id="{{ id }}">
+  <div class="msg-actions">
+    <button type="button" class="btn sm primary" data-copy="{{ id }}">Copy message</button>
+    <button type="button" class="btn sm ghost" data-copy="{{ id }}" data-mode="text" title="Writes the links out in full, for sites that don't keep hyperlinks">Copy as plain text</button>
+  </div>
+  <details {{ 'open' if open }}><summary>Preview message</summary><div class="msg-html">{{ msg.html }}</div></details>
+  <textarea class="msg-text" hidden readonly>{{ msg.text }}</textarea>
+</div>
+{%- endmacro %}

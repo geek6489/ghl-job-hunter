@@ -1,34 +1,41 @@
-{% extends "base.html" %}{% from "_macros.html" import job_row %}{% block content %}
-<div class="page-head">
-  <h1>Overview</h1>
-  <form method="post" action="/run-now"><button class="btn">Run a scan now</button></form>
+{% extends "base.html" %}{% from "_macros.html" import score, message_box %}{% block content %}
+<div class="hero">
+  <div>
+    <h1>Job board</h1>
+    <p class="muted">New postings land here after every hourly scan, each with an application message ready to send.
+    {% if last_run %}Last scan {{ last_run.started_at|ago }} <span class="status st-{{ last_run.status }}">{{ last_run.status }}</span>{% endif %}</p>
+  </div>
+  <div class="hero-side">
+    <form method="get" class="seg">{% for d, l in [(1,'24h'),(3,'3 days'),(7,'7 days'),(30,'30 days')] %}<button name="days" value="{{ d }}" class="{{ 'on' if days==d }}">{{ l }}</button>{% endfor %}</form>
+  </div>
 </div>
-{% if not claude %}<p class="warn">Claude is not configured (ANTHROPIC_API_KEY), so jobs are scored by keyword matching and have no AI summaries.</p>{% endif %}
 <div class="kpis">
-  <a class="kpi" href="/jobs"><b>{{ stats.total }}</b><span>Total jobs found</span></a>
-  <a class="kpi" href="/jobs?sort=newest&posted_within=1"><b>{{ stats.today }}</b><span>Discovered today</span></a>
-  <a class="kpi ex" href="/jobs?min_score=90"><b>{{ stats.excellent }}</b><span>Excellent matches</span></a>
-  <a class="kpi strong" href="/jobs?min_score=75&max_score=89"><b>{{ stats.strong }}</b><span>Strong matches</span></a>
-  <a class="kpi" href="/jobs?status=Active"><b>{{ stats.active }}</b><span>Active opportunities</span></a>
-  <a class="kpi" href="/tracker"><b>{{ stats.applied }}</b><span>Jobs applied to</span></a>
+  <a class="kpi" href="/jobs"><b>{{ stats.total }}</b><span>Jobs found</span></a>
+  <a class="kpi" href="/jobs?sort=newest&posted_within=1"><b>{{ stats.today }}</b><span>New in last 24h</span></a>
+  <a class="kpi strong" href="/jobs?min_score=75"><b>{{ stats.strong }}</b><span>Strong matches</span></a>
+  <a class="kpi" href="/tracker"><b>{{ stats.applied }}</b><span>Applied</span></a>
 </div>
-<div class="grid2">
-  <section class="card">
-    <h2>Best open matches</h2>
-    <table class="tbl"><tbody>{% for j in top %}{{ job_row(j) }}{% else %}<tr><td class="muted">No scored jobs yet. The first scan runs within a minute of the worker starting.</td></tr>{% endfor %}</tbody></table>
+{% if not claude %}<p class="note">Scores come from keyword matching until a Claude API key is added.</p>{% endif %}
+<div class="lanes">
+{% for key, label, hint in lane_info %}
+  <section class="lane lane-{{ key }}">
+    <header class="lane-head"><div><h2>{{ label }}</h2><p>{{ hint }}</p></div><span class="count">{{ lanes[key]|length }}</span></header>
+    <div class="lane-body">
+    {% for item in lanes[key] %}{% set j = item.job %}
+      <article class="jcard">
+        <div class="jtop">
+          {{ score(j) }}
+          <span class="when" title="Found {{ j.discovered_at|local }}">{{ j.discovered_at|ago }}</span>
+        </div>
+        <a class="jtitle" href="/jobs/{{ j.id }}">{{ j.title }}</a>
+        <div class="jmeta">{{ j.company if j.company != NOT_SPECIFIED else 'Company not listed' }}{% if j.work_arrangement != NOT_SPECIFIED %} · {{ j.work_arrangement }}{% endif %}{% if j.salary_text != NOT_SPECIFIED %} · {{ j.salary_text }}{% endif %}</div>
+        <div class="jpills">{% for p in j.platforms %}<span class="pill p-{{ p|replace(' ','') }}">{{ p }}</span>{% endfor %}{% if j.tracker_status != 'New' %}<span class="pill applied">{{ j.tracker_status }}</span>{% endif %}</div>
+        {{ message_box('m-' ~ j.id, item.msg) }}
+        <a class="btn sm open" href="{{ j.primary_url }}" target="_blank" rel="noopener noreferrer">Open posting ↗</a>
+      </article>
+    {% else %}<p class="empty">No jobs here in this period yet.</p>{% endfor %}
+    </div>
   </section>
-  <section class="card side">
-    <h2>Last scan</h2>
-    {% if last_run %}
-      <p><span class="status st-{{ last_run.status }}">{{ last_run.status }}</span> {{ last_run.started_at|local }}</p>
-      <p class="muted">{{ last_run.stats.get('new', 0) }} new · {{ last_run.stats.get('merged', 0) }} merged duplicates · {{ last_run.stats.get('refreshed', 0) }} already known · {{ last_run.stats.get('raw', 0) }} results scanned</p>
-    {% else %}<p class="muted">No scans yet.</p>{% endif %}
-    <h2>Last 7 days by platform</h2>
-    <ul class="bars">{% set mx = (by_platform|map(attribute=1)|max) if by_platform else 1 %}
-    {% for p, n in by_platform|sort(attribute=1, reverse=true) %}<li><span>{{ p }}</span><i style="width:{{ (100*n/mx)|round }}%"></i><b>{{ n }}</b></li>{% else %}<li class="muted">Nothing yet</li>{% endfor %}</ul>
-    {% if summary %}<h2>Latest daily summary</h2><p class="pre clip">{{ summary.narrative }}</p><a href="/summaries">All summaries →</a>{% endif %}
-  </section>
+{% endfor %}
 </div>
-<section class="card"><h2>Recently discovered</h2>
-<table class="tbl"><tbody>{% for j in recent %}{{ job_row(j) }}{% endfor %}</tbody></table></section>
 {% endblock %}

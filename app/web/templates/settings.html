@@ -31,6 +31,16 @@
   <section class="card"><h2>Your expertise (Claude scores against this)</h2>
     <textarea name="profile" rows="9">{{ p.profile }}</textarea>
   </section>
+  <section class="card span2" id="message"><h2>Application message</h2>
+    <p class="muted small">Every job card gets this message, filled in for that job. Placeholders: {greeting} (company team, or "there"), {title}, {company}, {skills_line} (skills the post asks for), {links} (Resume | Video Loom | Portfolio), {name}.</p>
+    <div class="grid3">
+      <label>Your name<input name="applicant_name" value="{{ p.applicant_name }}"></label>
+      <label>Resume link<input name="resume_url" value="{{ p.resume_url }}"></label>
+      <label>Video Loom link<input name="loom_url" value="{{ p.loom_url }}"></label>
+      <label>Portfolio link<input name="portfolio_url" value="{{ p.portfolio_url }}"></label>
+    </div>
+    <label>Message<textarea name="message_template" rows="14">{{ p.message_template }}</textarea></label>
+  </section>
   <div class="span2"><button class="btn primary">Save settings</button></div>
 </form>
 <form method="post" action="/settings/test-email"><button class="btn ghost">Send a test email</button></form>
