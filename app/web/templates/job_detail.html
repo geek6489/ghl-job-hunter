@@ -1,4 +1,4 @@
-{% extends "base.html" %}{% from "_macros.html" import score %}{% block content %}
+{% extends "base.html" %}{% from "_macros.html" import score, message_box %}{% block content %}
 <p><a href="/jobs">← All jobs</a></p>
 <div class="detail-head card">
   <div>
@@ -30,6 +30,7 @@
     <section class="card"><h2>Full description</h2><div class="pre">{{ job.description or 'Not Specified' }}</div></section>
   </div>
   <div>
+    <section class="card"><h2>Application message</h2>{{ message_box('m-detail', msg, open=True) }}</section>
     <section class="card"><h2>Details</h2>
       <dl class="dl">
         <dt>Salary / rate</dt><dd>{{ job.salary_text }}</dd>

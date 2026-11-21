@@ -8,7 +8,7 @@ import os
 import time
 from collections import defaultdict
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlencode, urlsplit
 
@@ -21,6 +21,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from .. import settings_store
 from ..analysis import category_for
+from ..board import LANES, application_message, lane_for
 from ..config import get_config
 from ..coverage import platform_coverage
 from ..db import init_db, session_scope
@@ -52,6 +53,28 @@ def score_class(score):
 
 
 templates.env.filters["score_class"] = score_class
+
+
+def ago(dt) -> str:
+    if not dt:
+        return ""
+    secs = max(0, int((utcnow() - dt).total_seconds()))
+    if secs < 3600:
+        return f"{max(1, secs // 60)}m ago"
+    if secs < 86400:
+        return f"{secs // 3600}h ago"
+    return f"{secs // 86400}d ago"
+
+
+templates.env.filters["ago"] = ago
+
+
+def today_local() -> str:
+    from zoneinfo import ZoneInfo
+    return datetime.now(ZoneInfo(get_config().timezone)).strftime("%A, %d %B %Y")
+
+
+templates.env.globals["today_local"] = today_local
 
 
 async def watchdog_loop():
@@ -167,33 +190,47 @@ def healthz():
 
 # --------------------------------------------------------------------------- overview
 @app.get("/", response_class=HTMLResponse)
-def overview(request: Request):
+def overview(request: Request, days: int = 30):
+    days = days if days in (1, 3, 7, 30) else 30
     with session_scope() as s:
+        prefs = settings_store.get_all(s)
         base = select(func.count(Job.id)).where(Job.is_job_posting.is_(True))
         since = utcnow() - timedelta(hours=24)
         stats = {
             "total": s.scalar(base),
             "today": s.scalar(base.where(Job.discovered_at >= since)),
-            "excellent": s.scalar(base.where(Job.score >= 90, Job.status.in_(["New", "Active"]))),
-            "strong": s.scalar(base.where(Job.score >= 75, Job.score < 90, Job.status.in_(["New", "Active"]))),
-            "active": s.scalar(base.where(Job.status.in_(["New", "Active"]))),
+            "strong": s.scalar(base.where(Job.score >= 75, Job.status.in_(["New", "Active"]))),
             "applied": s.scalar(base.where(Job.tracker_status.in_(["Applied", "Interview Scheduled", "Offer Received", "Rejected"]))),
         }
-        top = list(s.scalars(
-            select(Job).where(Job.is_job_posting.is_(True), Job.status.in_(["New", "Active"]), Job.score.is_not(None))
-            .order_by(Job.score.desc(), Job.discovered_at.desc()).limit(8)
+        cutoff = utcnow() - timedelta(days=days)
+        jobs = list(s.scalars(
+            select(Job).where(Job.is_job_posting.is_(True), Job.status.in_(["New", "Active"]), Job.discovered_at >= cutoff)
+            .order_by(Job.discovered_at.desc()).limit(600)
         ))
-        recent = list(s.scalars(select(Job).where(Job.is_job_posting.is_(True)).order_by(Job.discovered_at.desc()).limit(8)))
-        by_platform = s.execute(
-            select(Job.primary_platform, func.count(Job.id)).where(Job.is_job_posting.is_(True), Job.discovered_at >= utcnow() - timedelta(days=7))
-            .group_by(Job.primary_platform)
-        ).all()
-        last_run = s.scalar(select(MonitorRun).order_by(MonitorRun.id.desc()).limit(1))
-        summary = s.scalar(select(DailySummary).order_by(DailySummary.day.desc()).limit(1))
-        for j in top + recent:
+        lanes = {key: [] for key, _, _ in LANES}
+        for j in jobs:
             _ = j.sources
-        return render(request, "overview.html", stats=stats, top=top, recent=recent, by_platform=by_platform,
-                      last_run=last_run, summary=summary, claude=cfg.claude_enabled)
+            lanes[lane_for(j.title)].append({"job": j, "msg": application_message(j, prefs)})
+        last_run = s.scalar(select(MonitorRun).order_by(MonitorRun.id.desc()).limit(1))
+        # Jobs found per day for the last 7 days (local time), for the small chart
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo(cfg.timezone)
+        today = datetime.now(tz).date()
+        found = s.scalars(select(Job.discovered_at).where(
+            Job.is_job_posting.is_(True), Job.discovered_at >= utcnow() - timedelta(days=8)))
+        per_day = defaultdict(int)
+        for d in found:
+            per_day[d.replace(tzinfo=timezone.utc).astimezone(tz).date()] += 1
+        week = [per_day[today - timedelta(days=i)] for i in range(6, -1, -1)]
+        active = s.scalar(base.where(Job.status.in_(["New", "Active"]))) or 0
+        stats["strong_pct"] = round(100 * stats["strong"] / active) if active else 0
+        stats["lanes"] = {k: len(v) for k, v in lanes.items()}
+        hour = datetime.now(tz).hour
+        greeting = "Good morning" if 5 <= hour < 12 else "Good afternoon" if hour < 17 else "Good evening"
+        first_name = (prefs.get("applicant_name") or "").split(" ")[0]
+        return render(request, "overview.html", stats=stats, lanes=lanes, lane_info=LANES, days=days, week=week,
+                      greeting=greeting, first_name=first_name,
+                      last_run=last_run, claude=cfg.claude_enabled, now=utcnow())
 
 
 # --------------------------------------------------------------------------- jobs
@@ -264,8 +301,9 @@ def job_detail(request: Request, job_id: str):
         if not job:
             raise HTTPException(404)
         _ = job.sources
+        msg = application_message(job, settings_store.get_all(s))
         return render(request, "job_detail.html", job=job, trackers=TRACKER_STATUSES, statuses=JOB_STATUSES,
-                      a=job.analysis or {}, nav="jobs")
+                      a=job.analysis or {}, nav="jobs", msg=msg)
 
 
 @app.post("/jobs/{job_id}/tracker")
@@ -367,6 +405,13 @@ async def settings_save(request: Request):
         settings_store.put(s, "salary_min_hourly_usd", _num(str(form.get("salary_min_hourly_usd") or "")))
         settings_store.put(s, "max_job_age_days", max(1, min(120, int(form.get("max_job_age_days") or 30))))
         settings_store.put(s, "profile", str(form.get("profile") or "")[:5000])
+        if "message_template" in form:
+            settings_store.put(s, "applicant_name", str(form.get("applicant_name") or "").strip()[:200])
+            for key in ("resume_url", "loom_url", "portfolio_url"):
+                url = str(form.get(key) or "").strip()[:1000]
+                settings_store.put(s, key, url if url.startswith(("https://", "http://")) else settings_store.DEFAULTS[key])
+            settings_store.put(s, "message_template", str(form.get("message_template") or "").strip()[:8000]
+                               or settings_store.DEFAULTS["message_template"])
     return RedirectResponse("/settings?saved=1", status_code=303)
 
 

@@ -2,23 +2,80 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{% block title %}GHL Job Hunter{% endblock %}</title>
-<link rel="stylesheet" href="/static/style.css">
+<title>{% block title %}Opportunities{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css?v=11">
+<script>try{var d=document.documentElement;d.dataset.mode=localStorage.getItem('opp-mode')||'dark';d.dataset.accent=localStorage.getItem('opp-accent')||'forest';}catch(e){}</script>
 </head>
 <body>
+<div class="glow g1"></div><div class="glow g2"></div>
 {% if request.session.get("user") %}
-<header class="topbar">
-  <a class="brand" href="/"><span class="logo">GJ</span> GHL Job Hunter</a>
+<aside class="rail">
+  <a class="logo" href="/" aria-label="Opportunities">O</a>
   <nav>
-    <a href="/" class="{{ 'on' if nav=='overview' }}">Overview</a>
-    <a href="/jobs" class="{{ 'on' if nav in ('jobs','job_detail') }}">Jobs</a>
-    <a href="/tracker" class="{{ 'on' if nav=='tracker' }}">Tracker</a>
-    <a href="/summaries" class="{{ 'on' if nav=='summaries' }}">Daily summaries</a>
-    <a href="/settings" class="{{ 'on' if nav=='settings' }}">Settings</a>
-    <a href="/health" class="{{ 'on' if nav=='health' }}">Health</a>
+    <a href="/" class="{{ 'on' if nav=='overview' }}" title="Board" aria-label="Board"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18" rx="2"/><rect x="14" y="3" width="7" height="10" rx="2"/><rect x="14" y="17" width="7" height="4" rx="1.5"/></svg><span>Board</span></a>
+    <a href="/jobs" class="{{ 'on' if nav in ('jobs','job_detail') }}" title="All jobs" aria-label="All jobs"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></svg><span>All jobs</span></a>
+    <a href="/tracker" class="{{ 'on' if nav=='tracker' }}" title="Tracker" aria-label="Tracker"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg><span>Tracker</span></a>
+    <a href="/summaries" class="{{ 'on' if nav=='summaries' }}" title="Summaries" aria-label="Summaries"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg><span>Summaries</span></a>
+    <a href="/settings" class="{{ 'on' if nav=='settings' }}" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Settings</span></a>
+    <a href="/health" class="{{ 'on' if nav=='health' }}" title="Health" aria-label="Health"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span>Health</span></a>
   </nav>
-  <form method="post" action="/logout"><button class="link">Sign out</button></form>
-</header>
+  <details class="theme">
+    <summary class="rail-out" title="Colors" aria-label="Colors"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1 0 1.6-.8 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5c0-4.4-4-7.6-9-7.6z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="12" cy="7.5" r="1"/><circle cx="16.5" cy="10.5" r="1"/></svg></summary>
+    <div class="glass theme-pop">
+      <p>Mode</p>
+      <div class="modes"><button type="button" data-set-mode="dark">Dark</button><button type="button" data-set-mode="light">Light</button></div>
+      <p>Color</p>
+      <div class="swatches">
+        <button type="button" data-set-accent="lagoon" title="Lagoon (turquoise and lime)" style="--sw:#2ee6d6;background:linear-gradient(135deg,#2ee6d6 50%,#c6f432 50%)"></button>
+        <button type="button" data-set-accent="forest" title="Forest and gold" style="background:linear-gradient(135deg,#02462E 50%,#FEC700 50%)"></button>
+        <button type="button" data-set-accent="lemon" title="Teal and lemon" style="background:linear-gradient(135deg,#3D8D7A 50%,#FFFACD 50%)"></button>
+        <button type="button" data-set-accent="pine" title="Pine and khaki" style="background:linear-gradient(135deg,#0B493A 50%,#EAF06A 50%)"></button>
+        <button type="button" data-set-accent="deepsea" title="Deep sea" style="background:conic-gradient(#003135 0 25%,#0FA4AF 0 50%,#964734 0 75%,#AFDDE5 0)"></button>
+        <button type="button" data-set-accent="ember" title="Ember" style="--sw:#ff7a2f"></button>
+        <button type="button" data-set-accent="sage" title="Sage" style="--sw:#8fd3b0"></button>
+        <button type="button" data-set-accent="glacier" title="Glacier" style="--sw:#6cc7ff"></button>
+        <button type="button" data-set-accent="rose" title="Rose" style="--sw:#ff6f91"></button>
+        <button type="button" data-set-accent="lime" title="Lime" style="--sw:#c6f432"></button>
+      </div>
+    </div>
+  </details>
+  <form method="post" action="/logout"><button class="rail-out" title="Sign out" aria-label="Sign out"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button></form>
+</aside>
 {% endif %}
-<main class="wrap">{% block content %}{% endblock %}</main>
+<main class="wrap {{ 'with-rail' if request.session.get('user') }}">{% block content %}{% endblock %}</main>
+<script>
+function markTheme(){const d=document.documentElement;document.querySelectorAll('[data-set-mode]').forEach(b=>b.classList.toggle('on',b.dataset.setMode===d.dataset.mode));document.querySelectorAll('[data-set-accent]').forEach(b=>b.classList.toggle('on',b.dataset.setAccent===d.dataset.accent));}
+markTheme();
+document.addEventListener('click', (e) => {
+  const m = e.target.closest('[data-set-mode]'), a = e.target.closest('[data-set-accent]');
+  if (!m && !a) { const open = document.querySelector('.theme[open]'); if (open && !e.target.closest('.theme')) open.removeAttribute('open'); return; }
+  const d = document.documentElement;
+  if (m) { d.dataset.mode = m.dataset.setMode; try { localStorage.setItem('opp-mode', d.dataset.mode); } catch (_) {} }
+  if (a) { d.dataset.accent = a.dataset.setAccent; try { localStorage.setItem('opp-accent', d.dataset.accent); } catch (_) {} }
+  markTheme();
+});
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-copy]');
+  if (!btn) return;
+  const src = document.getElementById(btn.dataset.copy);
+  const html = src.querySelector('.msg-html').innerHTML;
+  const text = src.querySelector('.msg-text').value;
+  const plain = btn.dataset.mode === 'text';
+  try {
+    if (!plain && window.ClipboardItem) {
+      await navigator.clipboard.write([new ClipboardItem({
+        'text/html': new Blob([html], {type: 'text/html'}),
+        'text/plain': new Blob([text], {type: 'text/plain'})})]);
+    } else {
+      await navigator.clipboard.writeText(text);
+    }
+  } catch (err) {
+    const ta = src.querySelector('.msg-text'); ta.hidden = false; ta.select(); document.execCommand('copy'); ta.hidden = true;
+  }
+  const old = btn.textContent; btn.textContent = 'Copied'; btn.classList.add('done');
+  setTimeout(() => { btn.textContent = old; btn.classList.remove('done'); }, 1600);
+});
+</script>
 </body></html>
