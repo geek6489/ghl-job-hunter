@@ -47,6 +47,11 @@ pytest -q                              # tests (offline)
 
 ## Deploy (pick one)
 
+### Free: GitHub Actions + Neon (no card for hosting)
+
+Hourly scans run on GitHub Actions, data lives in a free Neon Postgres database, and the dashboard
+runs on Render's free plan or your own computer. Step-by-step: [docs/FREE_SETUP.md](docs/FREE_SETUP.md).
+
 ### Render (managed, about $20/month)
 
 1. Push this repository to GitHub.

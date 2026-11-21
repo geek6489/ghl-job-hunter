@@ -121,3 +121,22 @@ def test_disabled_platform_is_skipped(net):
         settings_store.put(s, "platforms", p)
         run = run_monitor(s, trigger="manual", sources=[RemotiveSource()])
         assert run.stats["skipped_sources"]["remotive"] == "platform disabled"
+
+
+def test_run_once_scheduled_mode(net, monkeypatch):
+    from app import run_once, worker
+    from app.sources import RemotiveSource
+    from app.models import MonitorRun
+
+    monkeypatch.setattr("app.pipeline.all_sources", lambda: [RemotiveSource()])
+    assert run_once.main() == 0
+    with session_scope() as s:
+        assert settings_store.get(s, "worker_mode") == "scheduled"
+        assert s.scalar(select(func.count(MonitorRun.id))) == 1
+        # next hourly run 55 minutes later still counts as due thanks to the slack
+        from datetime import datetime, timedelta
+        last = datetime.fromisoformat(settings_store.get(s, "last_run_started_at"))
+        settings_store.put(s, "last_run_started_at", (last - timedelta(minutes=55)).isoformat())
+    assert run_once.main() == 0
+    with session_scope() as s:
+        assert s.scalar(select(func.count(MonitorRun.id))) == 2
