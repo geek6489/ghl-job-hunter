@@ -2,28 +2,26 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{% block title %}The Opportunities Desk{% endblock %}</title>
+<title>{% block title %}Opportunities{% endblock %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/style.css?v=4">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css?v=5">
 </head>
 <body>
 {% if request.session.get("user") %}
-<header class="mast">
-  <div class="mast-top">
-    <span>{{ today_local() }}</span>
-    <span class="mast-mid">GoHighLevel · Automation · CRM</span>
-    <form method="post" action="/logout"><button class="link">Sign out</button></form>
+<header class="top">
+  <div class="top-in">
+    <a class="mark" href="/"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="1" y="1" width="7" height="16" rx="1.5" fill="currentColor"/><rect x="10" y="1" width="7" height="9" rx="1.5" fill="currentColor" opacity=".55"/><rect x="10" y="12" width="7" height="5" rx="1.5" fill="currentColor" opacity=".3"/></svg>Opportunities</a>
+    <nav class="tabs">
+      <a href="/" class="{{ 'on' if nav=='overview' }}">Board</a>
+      <a href="/jobs" class="{{ 'on' if nav in ('jobs','job_detail') }}">All jobs</a>
+      <a href="/tracker" class="{{ 'on' if nav=='tracker' }}">Tracker</a>
+      <a href="/summaries" class="{{ 'on' if nav=='summaries' }}">Summaries</a>
+      <a href="/settings" class="{{ 'on' if nav=='settings' }}">Settings</a>
+      <a href="/health" class="{{ 'on' if nav=='health' }}">Health</a>
+    </nav>
+    <form method="post" action="/logout" class="out"><button class="link">Sign out</button></form>
   </div>
-  <a class="mast-title" href="/">The Opportunities Desk</a>
-  <nav class="mast-nav">
-    <a href="/" class="{{ 'on' if nav=='overview' }}">Board</a>
-    <a href="/jobs" class="{{ 'on' if nav in ('jobs','job_detail') }}">All jobs</a>
-    <a href="/tracker" class="{{ 'on' if nav=='tracker' }}">Tracker</a>
-    <a href="/summaries" class="{{ 'on' if nav=='summaries' }}">Summaries</a>
-    <a href="/settings" class="{{ 'on' if nav=='settings' }}">Settings</a>
-    <a href="/health" class="{{ 'on' if nav=='health' }}">Health</a>
-  </nav>
 </header>
 {% endif %}
 <main class="wrap">{% block content %}{% endblock %}</main>

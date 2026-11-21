@@ -1,35 +1,39 @@
 {% extends "base.html" %}{% from "_macros.html" import message_box %}{% block content %}
-<section class="ledger">
-  <a href="/jobs"><b>{{ stats.total }}</b><span>jobs on file</span></a>
-  <a href="/jobs?sort=newest&posted_within=1"><b>{{ stats.today }}</b><span>new in 24 hours</span></a>
-  <a href="/jobs?min_score=75"><b>{{ stats.strong }}</b><span>strong matches</span></a>
-  <a href="/tracker"><b>{{ stats.applied }}</b><span>applications sent</span></a>
-  <div class="ledger-note">
-    <p>{% if last_run %}Last scan {{ last_run.started_at|ago }}, <span class="st-word st-{{ last_run.status }}">{{ last_run.status }}</span>.{% else %}Waiting for the first scan.{% endif %} Next one on the hour.</p>
-    {% if not claude %}<p class="muted">Scores use keyword matching until a Claude key is added.</p>{% endif %}
-    <form method="get" class="range">Showing {% for d, l in [(1,'24 hours'),(3,'3 days'),(7,'7 days'),(30,'30 days')] %}<button name="days" value="{{ d }}" class="{{ 'on' if days==d }}">{{ l }}</button>{% endfor %}</form>
+<div class="bar">
+  <div class="bar-l">
+    <h1>Board</h1>
+    <span class="live {{ 'st-' ~ last_run.status if last_run }}">{% if last_run %}Scanned {{ last_run.started_at|ago }}{% else %}Waiting for first scan{% endif %}</span>
   </div>
-</section>
+  <form method="get" class="seg">{% for d, l in [(1,'24h'),(3,'3d'),(7,'7d'),(30,'30d')] %}<button name="days" value="{{ d }}" class="{{ 'on' if days==d }}">{{ l }}</button>{% endfor %}</form>
+</div>
+<div class="stats">
+  <a href="/jobs"><span>Total</span><b>{{ stats.total }}</b></a>
+  <a href="/jobs?sort=newest&posted_within=1"><span>New today</span><b>{{ stats.today }}</b></a>
+  <a href="/jobs?min_score=75"><span>Strong matches</span><b>{{ stats.strong }}</b></a>
+  <a href="/tracker"><span>Applied</span><b>{{ stats.applied }}</b></a>
+  {% if not claude %}<p class="hint">Scores use keyword matching until a Claude key is added.</p>{% endif %}
+</div>
 <div class="lanes">
 {% for key, label, hint in lane_info %}
   <section class="lane lane-{{ key }}">
-    <header class="lane-head">
-      <span class="lane-no">0{{ loop.index }}</span>
-      <h2>{{ label }}</h2>
-      <span class="lane-count">{{ lanes[key]|length }}</span>
-      <p>{{ hint }}</p>
-    </header>
+    <header class="lane-head" title="{{ hint }}"><i class="dot"></i><h2>{{ label }}</h2><span class="n">{{ lanes[key]|length }}</span></header>
+    <div class="lane-body">
     {% for item in lanes[key] %}{% set j = item.job %}
-      <article class="entry">
-        <div class="entry-meta">
-          <span>{{ j.platforms|join(' / ') }} · {{ j.discovered_at|ago }}{% if j.tracker_status != 'New' %} · <em>{{ j.tracker_status }}</em>{% endif %}</span>
-          {% if j.score is not none %}<span class="fit {{ j.score|score_class }}" title="{{ j.category or '' }}">{{ j.score }}<i style="--w:{{ j.score }}%"></i></span>{% endif %}
+      <article class="jc">
+        <div class="jc-top">
+          <a class="jc-title" href="/jobs/{{ j.id }}">{{ j.title }}</a>
+          {% if j.score is not none %}<span class="sc {{ j.score|score_class }}" title="{{ j.category or '' }}">{{ j.score }}</span>{% endif %}
         </div>
-        <h3><a href="/jobs/{{ j.id }}">{{ j.title }}</a></h3>
-        <p class="entry-sub">{{ j.company if j.company != NOT_SPECIFIED else 'Company not listed' }}{% if j.work_arrangement != NOT_SPECIFIED %}, {{ j.work_arrangement|lower }}{% endif %}{% if j.salary_text != NOT_SPECIFIED %} · {{ j.salary_text }}{% endif %}</p>
+        <div class="jc-meta">
+          <span>{{ j.company if j.company != NOT_SPECIFIED else 'Company not listed' }}</span>
+          {% if j.work_arrangement != NOT_SPECIFIED %}<span>{{ j.work_arrangement }}</span>{% endif %}
+          {% if j.salary_text != NOT_SPECIFIED %}<span>{{ j.salary_text }}</span>{% endif %}
+        </div>
+        <div class="jc-src"><span>{{ j.platforms|join(', ') }}</span><span>{{ j.discovered_at|ago }}</span>{% if j.tracker_status != 'New' %}<span class="tr">{{ j.tracker_status }}</span>{% endif %}</div>
         {{ message_box('m-' ~ j.id, item.msg, open_url=j.primary_url) }}
       </article>
-    {% else %}<p class="empty">Nothing in this column for the period.<br>The next scan runs on the hour.</p>{% endfor %}
+    {% else %}<p class="empty">No jobs in this period yet.</p>{% endfor %}
+    </div>
   </section>
 {% endfor %}
 </div>
