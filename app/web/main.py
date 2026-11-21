@@ -8,7 +8,7 @@ import os
 import time
 from collections import defaultdict
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlencode, urlsplit
 
@@ -212,7 +212,24 @@ def overview(request: Request, days: int = 30):
             _ = j.sources
             lanes[lane_for(j.title)].append({"job": j, "msg": application_message(j, prefs)})
         last_run = s.scalar(select(MonitorRun).order_by(MonitorRun.id.desc()).limit(1))
-        return render(request, "overview.html", stats=stats, lanes=lanes, lane_info=LANES, days=days,
+        # Jobs found per day for the last 7 days (local time), for the small chart
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo(cfg.timezone)
+        today = datetime.now(tz).date()
+        found = s.scalars(select(Job.discovered_at).where(
+            Job.is_job_posting.is_(True), Job.discovered_at >= utcnow() - timedelta(days=8)))
+        per_day = defaultdict(int)
+        for d in found:
+            per_day[d.replace(tzinfo=timezone.utc).astimezone(tz).date()] += 1
+        week = [per_day[today - timedelta(days=i)] for i in range(6, -1, -1)]
+        active = s.scalar(base.where(Job.status.in_(["New", "Active"]))) or 0
+        stats["strong_pct"] = round(100 * stats["strong"] / active) if active else 0
+        stats["lanes"] = {k: len(v) for k, v in lanes.items()}
+        hour = datetime.now(tz).hour
+        greeting = "Good morning" if 5 <= hour < 12 else "Good afternoon" if hour < 17 else "Good evening"
+        first_name = (prefs.get("applicant_name") or "").split(" ")[0]
+        return render(request, "overview.html", stats=stats, lanes=lanes, lane_info=LANES, days=days, week=week,
+                      greeting=greeting, first_name=first_name,
                       last_run=last_run, claude=cfg.claude_enabled, now=utcnow())
 
 
