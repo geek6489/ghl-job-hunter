@@ -82,8 +82,25 @@
     </a>
   </section>
   {% if not claude %}<p class="hint">Scores use keyword matching until a Claude key is added.</p>{% endif %}
-  
-  
+  <section class="glass scanlog" aria-label="Hourly scan log">
+    <div class="sl-head">
+      <span class="t-ico">↻</span><b>Hourly scan log</b>
+      {% if scan_info.overdue %}<span class="sl-warn">No scan for {{ scan_info.hours_since }} hours. GitHub sometimes delays its hourly runs.</span>
+      {% else %}<em>Next scan around {{ scan_info.next.strftime('%-I:%M %p') }}</em>{% endif %}
+      <a href="/health">Details</a>
+    </div>
+    <ol class="sl-list">
+    {% for r in scan_log %}
+      {% if r.gap_before %}<li class="sl-gap" title="No scan ran in this gap">{{ r.gap_before }}h gap</li>{% endif %}
+      <li class="sl-run st-{{ r.status }}" title="{{ r.error or (r.trigger ~ ' run, ' ~ r.status) }}">
+        <span class="sl-time"><i></i>{{ r.at.strftime('%-I:%M %p') }}{% if r.at.date() != scan_info.today %} · {{ r.at.strftime('%b %-d') }}{% endif %}</span>
+        <span class="sl-nums">{% if r.status == 'running' %}scanning…{% elif r.status == 'failed' %}failed{% else %}{{ r.found }} found · <b>{{ r.new }} new</b>{% if r.emailed %} · {{ r.emailed }} emailed{% endif %}{% endif %}</span>
+      </li>
+    {% else %}
+      <li class="sl-empty">No scans recorded yet. The first one runs on the hour.</li>
+    {% endfor %}
+    </ol>
+  </section>
     {{ lane_grid(lanes, False) }}
   </section>
   <section class="screen" aria-label="Applied jobs">

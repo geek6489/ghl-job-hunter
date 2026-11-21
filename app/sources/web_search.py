@@ -5,12 +5,15 @@ Uses a licensed search API (Serper.dev's Google results, or Brave Search API) wi
 No platform is scraped directly."""
 from __future__ import annotations
 
+import logging
 import re
 
 from ..config import get_config
 from ..http import get_json, post_json
 from ..normalize import HIRING_TERMS, detect_platform, parse_date, platform_post_id
 from .base import FetchContext, RawJob, Source, chunk_or_groups, take_rotating
+
+log = logging.getLogger(__name__)
 
 SOCIAL_EXCLUDES = "-site:linkedin.com -site:facebook.com -site:instagram.com -site:x.com -site:twitter.com"
 
@@ -54,6 +57,27 @@ def build_queries(ctx: FetchContext) -> list[tuple[str, str]]:
                 continue
             for tpl in templates:
                 plan.append((platform, tpl.format(kw=kw)))
+    return plan
+
+
+FREE_FLAG = "serper_free_plan"
+FREE_PLAN_ERROR = "not allowed for free accounts"
+FREE_QUERIES_PER_RUN = 8  # Serper's free credits are limited: about 190 a day at this rate
+PLAIN_TEMPLATES = ["{kw} job", "{kw} hiring", "{kw} remote job", "{kw} linkedin hiring", "{kw} freelance hiring"]
+
+
+def build_plain_queries(ctx: FetchContext) -> list[tuple[str, str]]:
+    """Queries with no search operators (no site:, OR, quotes or minus), for Serper's free plan.
+    The platform is worked out from each result's URL. GHL keywords come first."""
+    seen, plan = set(), []
+    for kw in list(ctx.ghl_keywords) + list(ctx.automation_keywords):
+        k = kw.strip().strip('"').lower()
+        if k and k not in seen:
+            seen.add(k)
+            plan.extend(("Google", tpl.format(kw=k)) for tpl in PLAIN_TEMPLATES[:2])
+    for kw in list(ctx.ghl_keywords)[:3]:
+        k = kw.strip().strip('"').lower()
+        plan.extend(("Google", tpl.format(kw=k)) for tpl in PLAIN_TEMPLATES[2:])
     return plan
 
 
@@ -105,18 +129,37 @@ class WebSearchSource(Source):
             for r in (data.get("web") or {}).get("results", [])
         ]
 
+    def _plan(self, ctx: FetchContext) -> list[tuple[str, str]]:
+        cfg = get_config()
+        if ctx.rotation.get(FREE_FLAG):
+            return take_rotating(build_plain_queries(ctx), ctx, f"web_search:{self.provider}:plain",
+                                 min(FREE_QUERIES_PER_RUN, cfg.max_search_queries_per_run))
+        budget = ctx.query_budget.get("search", cfg.max_search_queries_per_run)
+        return take_rotating(build_queries(ctx), ctx, f"web_search:{self.provider}", budget)
+
     def fetch(self, ctx: FetchContext) -> list[RawJob]:
         cfg = get_config()
-        plan = build_queries(ctx)
-        budget = ctx.query_budget.get("search", cfg.max_search_queries_per_run)
-        picked = take_rotating(plan, ctx, f"web_search:{self.provider}", budget)
+        picked = self._plan(ctx)
         cost = cfg.serper_cost_per_query if self.provider == "serper" else cfg.brave_cost_per_query
         out: list[RawJob] = []
-        for platform, query in picked:
+        i = 0
+        while i < len(picked):
+            platform, query = picked[i]
+            i += 1
             try:
                 results = self._search(query, 7 if ctx.weekly_sweep else 1)
             except Exception as exc:  # logged, never fatal for the run
                 ctx.log_search(self.provider, platform, query, False, 0, str(exc))
+                if self.provider == "serper" and FREE_PLAN_ERROR in str(exc) and not ctx.rotation.get(FREE_FLAG):
+                    # Serper's free plan rejects site:, OR and other operators. Switch to plain queries from now on.
+                    log.warning("Serper free plan detected: switching to plain search queries")
+                    ctx.rotation[FREE_FLAG] = 1
+                    picked, i = self._plan(ctx), 0
+                    continue
+                failures = getattr(self, "_failures", 0) + 1
+                self._failures = failures
+                if failures == 1:  # show the provider's reason once in the run log (GitHub Actions output)
+                    log.warning("%s search failed: %s | query: %s", self.provider, exc, query[:200])
                 continue
             ctx.record_usage(self.provider, 1, cost)
             kept = 0

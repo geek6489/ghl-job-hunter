@@ -140,3 +140,33 @@ def test_run_once_scheduled_mode(net, monkeypatch):
     assert run_once.main() == 0
     with session_scope() as s:
         assert s.scalar(select(func.count(MonitorRun.id))) == 2
+
+
+def test_serper_free_plan_switches_to_plain_queries(net):
+    """Serper's free plan rejects site:/OR queries with a 400; the run switches to plain queries and keeps going."""
+    import json as _json
+    import httpx
+    from app import http
+    orig, sent = net.handler, []
+
+    def free_plan(req):
+        if req.url.host == "google.serper.dev":
+            q = _json.loads(req.content)["q"]
+            sent.append(q)
+            if any(op in q for op in ("site:", " OR ", '"', " -")):
+                return httpx.Response(400, json={"message": "Query pattern not allowed for free accounts.", "statusCode": 400})
+        return orig(req)
+
+    http.set_client(httpx.Client(transport=httpx.MockTransport(free_plan)))
+    with session_scope() as s:
+        run = run_monitor(s, trigger="manual", sources=[WebSearchSource()])
+        assert settings_store.get(s, "rotation").get("serper_free_plan") == 1
+        plain = [q for q in sent if "site:" not in q and " OR " not in q]
+        assert 1 <= len(plain) <= 8
+        assert run.stats["sources"]["web_search"] > 0
+        n_failed = s.scalar(select(func.count(SearchLog.id)).where(SearchLog.ok.is_(False)))
+    assert n_failed == 1  # only the first operator query was wasted
+    with session_scope() as s:  # the next run goes straight to plain queries
+        sent.clear()
+        run_monitor(s, trigger="manual", sources=[WebSearchSource()])
+        assert sent and all("site:" not in q for q in sent)
