@@ -24,7 +24,7 @@ from ..analysis import category_for
 from ..board import LANES, application_message, lane_for
 
 APPLIED_STATUSES = ["Applied", "Interview Scheduled", "Offer Received", "Rejected"]
-from ..config import get_config
+from ..config import WorkerConfigView, get_config
 from ..coverage import platform_coverage
 from ..db import init_db, session_scope
 from ..models import (
@@ -529,11 +529,12 @@ def health(request: Request, queued: str = ""):
         ).all()
         days = max(1, (now - month_start).days + 1)
         total_cost = sum((u[4] or 0) for u in usage)
+        view = WorkerConfigView(cfg, settings_store.get(s, "worker_config"))
         return render(
             request, "health.html", hb=hb, hb_fresh=bool(hb) and now - datetime.fromisoformat(hb) < heartbeat_limit(s),
             worker_mode=settings_store.get(s, "worker_mode") or "not started",
             runs=runs, failures=failures, usage=usage, total_cost=total_cost,
-            projected=total_cost / days * 30, notes=notes, last24=last24, coverage=platform_coverage(), cfg=cfg,
+            projected=total_cost / days * 30, notes=notes, last24=last24, coverage=platform_coverage(view), cfg=view,
             queued=queued, interval=settings_store.get(s, "monitor_interval_minutes", 60),
         )
 

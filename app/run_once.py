@@ -9,7 +9,7 @@ import os
 import sys
 
 from . import settings_store
-from .config import get_config
+from .config import get_config, worker_config_snapshot
 from .db import init_db, session_scope
 from .models import utcnow
 from .worker import _safe, maintenance_tick, monitor_tick, notify_tick, summary_tick
@@ -27,6 +27,7 @@ def main() -> int:
         settings_store.ensure_defaults(s)
         settings_store.put(s, "worker_mode", "scheduled")
         settings_store.put(s, "worker_heartbeat", utcnow().isoformat())
+        settings_store.put(s, "worker_config", worker_config_snapshot())
     # The workflow fires hourly; monitor_tick itself skips when the Settings interval isn't up yet.
     # A "Run a scan now" request from the dashboard is picked up on the next hourly run.
     for task in (monitor_tick, notify_tick, summary_tick, maintenance_tick):

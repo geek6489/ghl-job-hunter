@@ -79,3 +79,15 @@ def test_mark_applied_moves_job_to_applied_screen(net):
         with session_scope() as s:
             j = s.get(Job, jid)
             assert j.tracker_status == "New" and j.applied_at is None
+
+
+def test_health_shows_worker_keys_not_dashboard_keys():
+    from app import settings_store
+    with session_scope() as s:
+        settings_store.put(s, "worker_config", {"serper_api_key": True, "resend_api_key": True, "email_from": True,
+                                                "email_provider": "resend"})
+    with client() as c:
+        login(c)
+        page = c.get("/health").text
+        assert "Web search API (Serper)" in page
+        assert 'class="y">Email (resend)' in page

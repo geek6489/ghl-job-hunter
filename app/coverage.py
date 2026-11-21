@@ -6,8 +6,8 @@ from .config import get_config
 FULL, PARTIAL, NEEDS_AUTH, OFF = "Fully integrated", "Partial", "Needs authorization", "Not configured"
 
 
-def platform_coverage() -> list[dict]:
-    cfg = get_config()
+def platform_coverage(cfg=None) -> list[dict]:
+    cfg = cfg or get_config()
     search = bool(cfg.serper_api_key or cfg.brave_api_key)
     search_name = "Serper (Google results)" if cfg.serper_api_key else ("Brave Search API" if cfg.brave_api_key else "a search API")
     rows = [

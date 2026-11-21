@@ -95,3 +95,39 @@ def reset_config() -> None:
     """Used by tests after changing environment variables."""
     global _config
     _config = None
+
+
+# Keys the scan worker holds. The dashboard can run on another host (Vercel) without them, so the worker
+# saves which ones it has (yes/no only, never the values) and the Health page shows that instead.
+SNAPSHOT_KEYS = ["serper_api_key", "brave_api_key", "serpapi_api_key", "x_bearer_token", "anthropic_api_key",
+                 "resend_api_key", "smtp_host", "email_to", "email_from", "healthcheck_ping_url"]
+
+
+def worker_config_snapshot() -> dict:
+    cfg = get_config()
+    snap = {k: bool(getattr(cfg, k, None)) for k in SNAPSHOT_KEYS}
+    snap.update(email_provider=cfg.email_provider, claude_model=cfg.claude_model, claude_effort=cfg.claude_effort)
+    return snap
+
+
+class WorkerConfigView:
+    """The dashboard's config, with the worker's key flags laid over it."""
+
+    def __init__(self, cfg, snap: dict | None):
+        self._cfg, self._snap = cfg, snap or {}
+
+    def __getattr__(self, name):
+        if name in self._snap:
+            v = self._snap[name]
+            return ("set" if v else "") if isinstance(v, bool) else v
+        return getattr(self._cfg, name)
+
+    @property
+    def claude_enabled(self) -> bool:
+        return bool(self.anthropic_api_key)
+
+    @property
+    def email_enabled(self) -> bool:
+        if not self.email_from:
+            return False
+        return bool(self.smtp_host) if self.email_provider == "smtp" else bool(self.resend_api_key)
