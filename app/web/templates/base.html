@@ -5,24 +5,28 @@
 <title>{% block title %}Opportunities · GHL Job Hunter{% endblock %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/style.css?v=2">
+<link rel="stylesheet" href="/static/style.css?v=3">
 </head>
 <body>
 {% if request.session.get("user") %}
-<header class="topbar">
-  <a class="brand" href="/"><span class="logo">◆</span><span>Opportunities</span></a>
+<div class="shell">
+<aside class="side">
+  <a class="brand" href="/"><span class="logo">◆</span><span>Opportunities<small>GHL Job Hunter</small></span></a>
   <nav>
-    <a href="/" class="{{ 'on' if nav=='overview' }}">Board</a>
-    <a href="/jobs" class="{{ 'on' if nav in ('jobs','job_detail') }}">All jobs</a>
-    <a href="/tracker" class="{{ 'on' if nav=='tracker' }}">Tracker</a>
-    <a href="/summaries" class="{{ 'on' if nav=='summaries' }}">Summaries</a>
-    <a href="/settings" class="{{ 'on' if nav=='settings' }}">Settings</a>
-    <a href="/health" class="{{ 'on' if nav=='health' }}">Health</a>
+    <a href="/" class="{{ 'on' if nav=='overview' }}"><i>▦</i>Board</a>
+    <a href="/jobs" class="{{ 'on' if nav in ('jobs','job_detail') }}"><i>☰</i>All jobs</a>
+    <a href="/tracker" class="{{ 'on' if nav=='tracker' }}"><i>✓</i>Tracker</a>
+    <a href="/summaries" class="{{ 'on' if nav=='summaries' }}"><i>✎</i>Summaries</a>
+    <a href="/settings" class="{{ 'on' if nav=='settings' }}"><i>⚙</i>Settings</a>
+    <a href="/health" class="{{ 'on' if nav=='health' }}"><i>♥</i>Health</a>
   </nav>
-  <form method="post" action="/logout"><button class="link">Sign out</button></form>
-</header>
-{% endif %}
+  <form method="post" action="/logout" class="signout"><button class="link">Sign out</button></form>
+</aside>
 <main class="wrap">{% block content %}{% endblock %}</main>
+</div>
+{% else %}
+<main class="wrap">{{ self.content() }}</main>
+{% endif %}
 <script>
 document.addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-copy]');

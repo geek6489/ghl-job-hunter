@@ -51,7 +51,7 @@ DEFAULTS: dict[str, Any] = {
     "max_job_age_days": 30,
     "profile": DEFAULT_PROFILE,
     # Ready-to-send application message shown on every job card
-    "applicant_name": "Hadiul Islam",
+    "applicant_name": "Hadi Ul Islam",
     **DEFAULT_LINKS,
     "message_template": DEFAULT_TEMPLATE,
 }
