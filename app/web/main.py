@@ -24,6 +24,7 @@ from ..analysis import category_for
 from ..board import LANES, application_message, lane_for
 
 APPLIED_STATUSES = ["Applied", "Interview Scheduled", "Offer Received", "Rejected"]
+HIDDEN_STATUS = "Not Interested"  # shown on the board as "Not relevant"
 from ..config import WorkerConfigView, get_config
 from ..coverage import platform_coverage
 from ..db import init_db, session_scope
@@ -208,7 +209,7 @@ def overview(request: Request, days: int = 30):
         cutoff = utcnow() - timedelta(days=days)
         jobs = list(s.scalars(
             select(Job).where(Job.is_job_posting.is_(True), Job.status.in_(["New", "Active"]), Job.discovered_at >= cutoff,
-                              Job.tracker_status.not_in(APPLIED_STATUSES + ["Not Interested"]))
+                              Job.tracker_status.not_in(APPLIED_STATUSES + [HIDDEN_STATUS]))
             .order_by(Job.discovered_at.desc()).limit(600)
         ))
         lanes = {key: [] for key, _, _ in LANES}
@@ -223,6 +224,15 @@ def overview(request: Request, days: int = 30):
         for j in applied_jobs:
             _ = j.sources
             applied[lane_for(j.title)].append({"job": j, "msg": application_message(j, prefs)})
+        hidden_jobs = list(s.scalars(
+            select(Job).where(Job.tracker_status == HIDDEN_STATUS)
+            .order_by(Job.tracker_updated_at.desc().nulls_last()).limit(600)
+        ))
+        hidden = {key: [] for key, _, _ in LANES}
+        for j in hidden_jobs:
+            _ = j.sources
+            hidden[lane_for(j.title)].append({"job": j, "msg": application_message(j, prefs)})
+        stats["hidden"] = len(hidden_jobs)
         week_ago = utcnow() - timedelta(days=7)
         stats["applied_week"] = sum(1 for j in applied_jobs if j.applied_at and j.applied_at >= week_ago)
         last_run = s.scalar(select(MonitorRun).order_by(MonitorRun.id.desc()).limit(1))
@@ -260,7 +270,7 @@ def overview(request: Request, days: int = 30):
         greeting = "Good morning" if 5 <= hour < 12 else "Good afternoon" if hour < 17 else "Good evening"
         first_name = (prefs.get("applicant_name") or "").split(" ")[0]
         return render(request, "overview.html", stats=stats, lanes=lanes, lane_info=LANES, days=days, week=week,
-                      greeting=greeting, first_name=first_name, applied=applied,
+                      greeting=greeting, first_name=first_name, applied=applied, hidden=hidden,
                       last_run=last_run, claude=cfg.claude_enabled, now=utcnow(),
                       scan_log=scan_log, scan_info=scan_info)
 
@@ -374,6 +384,18 @@ def mark_applied(job_id: str, applied: str = Form("1")):
         job.tracker_updated_at = utcnow()
         return {"id": job.id, "tracker_status": job.tracker_status,
                 "applied_at": job.applied_at.isoformat() if job.applied_at else None}
+
+
+@app.post("/jobs/{job_id}/hide")
+def mark_not_relevant(job_id: str, hidden: str = Form("1")):
+    """Board's "Not relevant" button: moves the job to the Not relevant screen (or back). Returns JSON."""
+    with session_scope() as s:
+        job = s.get(Job, job_id)
+        if not job:
+            raise HTTPException(404)
+        job.tracker_status = HIDDEN_STATUS if hidden == "1" else "New"
+        job.tracker_updated_at = utcnow()
+        return {"id": job.id, "tracker_status": job.tracker_status}
 
 
 @app.post("/jobs/{job_id}/reanalyze")

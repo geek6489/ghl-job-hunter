@@ -281,3 +281,18 @@ label.chk{display:flex;align-items:center;gap:8px;color:var(--ink);font-weight:5
 .sl-list li.sl-gap{justify-content:center;border-style:dashed;background:none;color:var(--bad);font:500 11px var(--mono)}
 .sl-list li.sl-empty{border:0;background:none;padding-left:0}
 @keyframes pulse{50%{opacity:.3}}
+
+/* Card actions: Mark as applied / Not relevant, and their undo buttons on the other screens */
+.acts{display:flex;gap:8px;margin-top:12px}
+.act{flex:1;display:none;align-items:center;justify-content:center;gap:7px;height:34px;border-radius:12px;border:1px dashed var(--edge-2);background:transparent;color:var(--ink-2);font:600 12.5px var(--sans);cursor:pointer;transition:.15s;white-space:nowrap}
+.act svg{opacity:.55}
+.jc.st-open .on-open,.jc.st-applied .on-applied,.jc.st-hidden .on-hidden{display:flex}
+.act-apply:hover{border-style:solid;border-color:var(--orange);color:var(--ink);background:color-mix(in srgb,var(--orange) 8%,transparent)}
+.act-hide{flex:0 0 auto;padding:0 14px;color:var(--muted)}
+.act-hide:hover{border-style:solid;border-color:var(--bad);color:var(--bad);background:color-mix(in srgb,var(--bad) 8%,transparent)}
+.act-apply.is-on{border-style:solid;border-color:color-mix(in srgb,var(--ex) 45%,transparent);color:var(--ex);background:color-mix(in srgb,var(--ex) 10%,transparent)}
+.act-hide.is-on{flex:1;border-style:solid;color:var(--ink-2)}
+.act-hide.is-on:hover{border-color:var(--orange);color:var(--ink);background:color-mix(in srgb,var(--orange) 8%,transparent)}
+.act.is-on svg{opacity:1}
+.act.failed{border-color:var(--bad);color:var(--bad)}
+.jc.st-hidden{opacity:.8}
