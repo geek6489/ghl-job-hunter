@@ -260,3 +260,9 @@ label.chk{display:flex;align-items:center;gap:8px;color:var(--ink);font-weight:5
 @keyframes arrive{0%{box-shadow:0 0 0 0 var(--orange-glow)}30%{box-shadow:0 0 0 4px var(--orange-glow)}100%{box-shadow:0 0 0 0 transparent}}
 .jc.is-applied .jc-title{opacity:.92}
 .jc-src .tr:empty{display:none}
+
+/* One-click switch between the two main themes: Forest & Gold dark and Lagoon light */
+.theme-flip .i-moon{display:none}
+:root[data-mode="light"] .theme-flip .i-sun{display:none}
+:root[data-mode="light"] .theme-flip .i-moon{display:block}
+@media (max-width:820px){.rail{gap:2px;padding:0 6px}.rail nav a,.rail-out{width:36px;height:36px}}
